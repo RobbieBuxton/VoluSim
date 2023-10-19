@@ -11,14 +11,13 @@
     pkgs = nixpkgs.legacyPackages.${system};
   in
   {
-    # Development shell used by running "nix develop"
+    # Development shell used by running "nix develop" for debugging
     devShells.${system}.default = pkgs.mkShell rec {
       name = "volumetricSim";
 
       packages = with pkgs; [ 
-        glxinfo
-        lshw
         python310Packages.glad2
+        glxinfo
       ];
     };
 
@@ -26,14 +25,22 @@
       pname = "volumetricSim";
       version = "0.0.1";
 
-      src = ./src; 
+      src = ./.; 
 
-      packages = with pkgs; [ 
+      buildInputs = with pkgs; [ 
+        python310
         python310Packages.glad2
+        
+        # Libs
+        glfw
+        xorg.libX11
+        xorg.libXrandr
+        xorg.libXi
       ];
 
+      # glad --api gl:core=4.6 --out-path glad
       buildPhase = ''
-        gcc main.cpp -lstdc++ -o volumetricSim
+        gcc -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl src/main.cpp glad/src/gl.c -I glad/include -lstdc++ -o volumetricSim 
       '';
 
       installPhase = ''
