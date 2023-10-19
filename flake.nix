@@ -16,7 +16,6 @@
       name = "volumetricSim";
 
       packages = with pkgs; [ 
-        python310Packages.glad2
         glxinfo
       ];
     };
@@ -27,10 +26,10 @@
 
       src = ./.; 
 
-      buildInputs = with pkgs; [ 
-        python310
+      buildInputs = with pkgs; [
         python310Packages.glad2
-        
+        glxinfo
+
         # Libs
         glfw
         xorg.libX11
@@ -38,9 +37,13 @@
         xorg.libXi
       ];
 
-      # glad --api gl:core=4.6 --out-path glad
-      buildPhase = ''
-        gcc -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl src/main.cpp glad/src/gl.c -I glad/include -lstdc++ -o volumetricSim 
+      buildPhase = let
+        gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl";
+        openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
+        gladBuildDir = "glad";
+      in ''
+        glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible 
+        gcc ${gccBuildLibs} src/main.cpp ${gladBuildDir}/src/gl.c -I ${gladBuildDir}/include -lstdc++ -o volumetricSim 
       '';
 
       installPhase = ''
