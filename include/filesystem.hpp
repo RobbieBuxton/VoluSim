@@ -3,10 +3,7 @@
 
 #include <string>
 #include <cstdlib>
-
-// This needs to be rewritten to work without hardcoding
-
-const char * logl_root = "/home/robbieb/Imperial/VolumetricSim";
+#include <filesystem>
 
 class FileSystem
 {
@@ -23,9 +20,7 @@ public:
 private:
   static std::string const & getRoot()
   {
-    static char const * envRoot = getenv("LOGL_ROOT_PATH");
-    static char const * givenRoot = (envRoot != nullptr ? envRoot : logl_root);
-    static std::string root = (givenRoot != nullptr ? givenRoot : "");
+    static std::string root = std::filesystem::current_path();
     return root;
   }
 

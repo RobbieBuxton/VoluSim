@@ -84,6 +84,8 @@
         xorg.libXi
       ];
 
+     currentPath = toString ./.;
+
       buildPhase = let
         gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm";
         openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
