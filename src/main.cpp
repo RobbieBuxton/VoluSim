@@ -74,17 +74,13 @@ int main()
     // Define the viewport dimensions
     glViewport(0, 0, WIDTH, HEIGHT);
 
-    // ######               ##### //
-    // ###### NEW CODE HERE ##### //
-    // ######               ##### //
-
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader ourShader(FileSystem::getPath("src/shaders/camera.vs").c_str(), FileSystem::getPath("src/shaders/camera.fs").c_str());
+    Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------

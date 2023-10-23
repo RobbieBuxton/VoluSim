@@ -39,7 +39,13 @@
         configurations = [
           {
             name = "Linux"; 
-            includePath = [ ".vscode/glad/include" "${pkgs.glfw}/include" "${pkgs.glm}/include" "${pkgs.stb}/include"]; 
+            includePath = [
+              "include" 
+              ".vscode/glad/include"
+              "${pkgs.glfw}/include"
+              "${pkgs.glm}/include"
+              "${pkgs.stb}/include"
+            ]; 
             defines = []; 
             compilerPath = "${pkgs.gcc}/bin/gcc";
             cStandard = "c17"; 
@@ -82,9 +88,12 @@
         gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm";
         openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
         gladBuildDir = "build/glad";
+        sourceFiles = "src/main.cpp ${gladBuildDir}/src/gl.c";
+        includePaths = "-I ${gladBuildDir}/include -I include";
       in ''
         glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible 
-        gcc ${gccBuildLibs} src/main.cpp ${gladBuildDir}/src/gl.c -I ${gladBuildDir}/include -lstdc++ -o volumetricSim 
+        echo ${includePaths}
+        g++ ${gccBuildLibs} ${sourceFiles} ${includePaths} -o volumetricSim 
       '';
 
       installPhase = ''

@@ -4,8 +4,8 @@
 #include <string>
 #include <cstdlib>
 
-// This needs to be replaced with nix
-// const char * logl_root = std::getenv("NIX_SOURCE_DIR");
+// This needs to be rewritten to work without hardcoding
+
 const char * logl_root = "/home/robbieb/Imperial/VolumetricSim";
 
 class FileSystem
