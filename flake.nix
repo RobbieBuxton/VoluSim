@@ -26,6 +26,8 @@
       
       # Libs
       glfw
+      glm
+      stb
       xorg.libX11
       xorg.libXrandr
       xorg.libXi
@@ -37,7 +39,7 @@
         configurations = [
           {
             name = "Linux"; 
-            includePath = [ ".vscode/glad/include" "${pkgs.glfw}/include"]; 
+            includePath = [ ".vscode/glad/include" "${pkgs.glfw}/include" "${pkgs.glm}/include" "${pkgs.stb}/include"]; 
             defines = []; 
             compilerPath = "${pkgs.gcc}/bin/gcc";
             cStandard = "c17"; 
@@ -69,13 +71,15 @@
 
         # Libs
         glfw
+        glm
+        stb
         xorg.libX11
         xorg.libXrandr
         xorg.libXi
       ];
 
       buildPhase = let
-        gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl";
+        gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm";
         openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
         gladBuildDir = "build/glad";
       in ''
