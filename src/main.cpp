@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <k4a/k4a.h>
 
 #include "camera.hpp"
 #include "filesystem.hpp"
@@ -34,6 +35,15 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
+
+    // Check for Kinects
+    uint32_t count = k4a_device_get_installed_count();
+    if (count == 0)
+    {
+        printf("No k4a devices attached!\n");
+        return 1;
+    }
+
     std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
     // Init GLFW
     glfwInit();
