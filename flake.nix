@@ -20,6 +20,7 @@
 
     packages = [ 
       k4a.packages.${system}.libk4a-dev
+      k4a.packages.${system}.k4a-tools
 
       #Setup and windown
       pkgs.gcc

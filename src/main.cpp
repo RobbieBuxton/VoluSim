@@ -20,12 +20,12 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 
 // Window dimensions
-const GLuint HEIGHT = 1080, WIDTH = 1920;
+GLuint HEIGHT = 1080, WIDTH = 1920;
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-GLfloat lastX = WIDTH / 2.0f;
-GLfloat lastY = HEIGHT / 2.0f;
+GLfloat lastX;
+GLfloat lastY;
 bool firstMouse = true;
 
 // timing
@@ -42,6 +42,8 @@ int main()
     {
         printf("No k4a devices attached!\n");
         return 1;
+    } else {
+        printf("k4a device attached!\n");
     }
 
     std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
@@ -52,6 +54,17 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+
+
+    // Get monitor infomation
+    GLFWmonitor* MyMonitor =  glfwGetPrimaryMonitor(); // The primary monitor..
+
+    const GLFWvidmode* mode = glfwGetVideoMode(MyMonitor);
+    WIDTH = mode->width;
+    HEIGHT = mode->height;
+    GLfloat lastX = WIDTH / 2.0f;
+    GLfloat lastY = HEIGHT / 2.0f;
+
 
     // Create a GLFWwindow object that we can use for GLFW's functions
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -92,9 +105,9 @@ int main()
     // ------------------------------------
     Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    float vertices[] = {
+    // set up vertex data (and buffer(s)) and configure vertex attributes for cube
+    // ---------------------------------------------------------------------------
+    float cubeVertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
          0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
          0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
@@ -150,14 +163,14 @@ int main()
         glm::vec3( 1.5f,  0.2f, -1.5f),
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
-    unsigned int VBO, VAO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
+    unsigned int cubeVBO, cubeVAO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(cubeVAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
 
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
@@ -166,6 +179,54 @@ int main()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    // set up vertex data (and buffer(s)) and configure vertex attributes for walls
+    // ---------------------------------------------------------------------------
+    float wallsVertices[] = {
+        -1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
+        -1.0f,  1.0f,  1.0f,  0.0f, 0.0f,
+         1.0f,  1.0f,  1.0f,  0.0f, 0.0f,
+        -1.0f, -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f, -1.0f,  0.0f, 0.0f,
+        -1.0f,  1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f,  1.0f, -1.0f,  0.0f, 0.0f,
+    };
+
+    unsigned int wallIndices[] = { 
+        // Back Wall
+        4, 5, 7,
+        4, 6, 7,
+        // Left wall
+        0, 4, 6,
+        0, 2, 6,
+        // Right wall
+        5, 1, 3,
+        5, 7, 3,
+        // Floor
+        4, 5, 1,
+        4, 0, 1
+    };  
+
+    // world space positions of our walls
+    unsigned int wallsVBO, wallsVAO, wallsEBO;
+    glGenVertexArrays(1, &wallsVAO);
+    glGenBuffers(1, &wallsVBO);
+    glGenBuffers(1, &wallsEBO);
+
+    glBindVertexArray(wallsVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, wallsVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(wallsVertices), wallsVertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wallsEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(wallIndices), wallIndices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // texture coord attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // load and create a texture 
     // -------------------------
@@ -234,8 +295,18 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         ourShader.setMat4("view", view);
 
+        // render Room
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::scale(model,glm::vec3(5.0 * (float)WIDTH / (float)HEIGHT,5.0,5.0));
+        model =  glm::translate(model, glm::vec3(0,0,-2.75));
+        ourShader.setMat4("model",model);
+        glBindVertexArray(wallsVAO);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDrawElements(GL_TRIANGLES, sizeof(wallIndices), GL_UNSIGNED_INT, 0);
+
         // render boxes
-        glBindVertexArray(VAO);
+        glBindVertexArray(cubeVAO);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         for (unsigned int i = 0; i < 10; i++)
         {
             // calculate the model matrix for each object and pass it to shader before drawing
@@ -244,7 +315,6 @@ int main()
             float angle = 20.0f * i;
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             ourShader.setMat4("model", model);
-
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
@@ -256,8 +326,8 @@ int main()
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteBuffers(1, &cubeVBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
