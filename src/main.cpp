@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <k4a/k4a.h>
 
 #include "camera.hpp"
@@ -15,18 +16,7 @@
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window);
-
-// Window dimensions
-GLuint HEIGHT = 1080, WIDTH = 1920;
-
-// camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-GLfloat lastX;
-GLfloat lastY;
-bool firstMouse = true;
+void processInput(GLFWwindow *window, glm::vec3& deltaTPntEye);
 
 // timing
 GLfloat deltaTime = 0.0f;	// time between current frame and last frame
@@ -35,7 +25,6 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-
     // Check for Kinects
     uint32_t count = k4a_device_get_installed_count();
     if (count == 0)
@@ -55,16 +44,14 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-
     // Get monitor infomation
-    GLFWmonitor* MyMonitor =  glfwGetPrimaryMonitor(); // The primary monitor..
+    // GLFWmonitor* MyMonitor =  glfwGetPrimaryMonitor(); // The primary monitor..
+    // const GLFWvidmode* mode = glfwGetVideoMode(MyMonitor);
+    // GLuint WIDTH = mode->width;
+    // GLuint HEIGHT = mode->height;
 
-    const GLFWvidmode* mode = glfwGetVideoMode(MyMonitor);
-    WIDTH = mode->width;
-    HEIGHT = mode->height;
-    GLfloat lastX = WIDTH / 2.0f;
-    GLfloat lastY = HEIGHT / 2.0f;
-
+    GLuint WIDTH = 1920;
+    GLuint HEIGHT = 1080;
 
     // Create a GLFWwindow object that we can use for GLFW's functions
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -77,8 +64,6 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetScrollCallback(window, scroll_callback);
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -105,91 +90,17 @@ int main()
     // ------------------------------------
     Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes for cube
-    // ---------------------------------------------------------------------------
-    float cubeVertices[] = {
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-    };
-    // world space positions of our cubes
-    glm::vec3 cubePositions[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f),
-        glm::vec3( 2.0f,  5.0f, -15.0f),
-        glm::vec3(-1.5f, -2.2f, -2.5f),
-        glm::vec3(-3.8f, -2.0f, -12.3f),
-        glm::vec3( 2.4f, -0.4f, -3.5f),
-        glm::vec3(-1.7f,  3.0f, -7.5f),
-        glm::vec3( 1.3f, -2.0f, -2.5f),
-        glm::vec3( 1.5f,  2.0f, -2.5f),
-        glm::vec3( 1.5f,  0.2f, -1.5f),
-        glm::vec3(-1.3f,  1.0f, -1.5f)
-    };
-    unsigned int cubeVBO, cubeVAO;
-    glGenVertexArrays(1, &cubeVAO);
-    glGenBuffers(1, &cubeVBO);
-
-    glBindVertexArray(cubeVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // texture coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
     // set up vertex data (and buffer(s)) and configure vertex attributes for walls
     // ---------------------------------------------------------------------------
     float wallsVertices[] = {
-        -1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
-         1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
-        -1.0f,  1.0f,  1.0f,  0.0f, 0.0f,
-         1.0f,  1.0f,  1.0f,  0.0f, 0.0f,
-        -1.0f, -1.0f, -1.0f,  0.0f, 0.0f,
-         1.0f, -1.0f, -1.0f,  0.0f, 0.0f,
-        -1.0f,  1.0f, -1.0f,  0.0f, 0.0f,
-         1.0f,  1.0f, -1.0f,  0.0f, 0.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f
     };
 
     unsigned int wallIndices[] = { 
@@ -222,44 +133,48 @@ int main()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(wallIndices), wallIndices, GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // texture coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
 
-    // load and create a texture 
-    // -------------------------
-    unsigned int texture1;
-    // texture 1
-    // ---------
-    glGenTextures(1, &texture1);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    unsigned char *data = stbi_load(FileSystem::getPath("data/resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
+    // tracker-space
+    // -------------
 
-    // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-    // -------------------------------------------------------------------------------------------
-    ourShader.use();
-    ourShader.setInt("texture1", 0);
+    // Three corners of the screen
+    glm::vec3 tPntScreenA = glm::vec3(0.0f,0.0f,0.0f);
+    glm::vec3 tPntScreenB = glm::vec3(1.0f,0.0f,0.0f);
+    glm::vec3 tPntScreenC = glm::vec3(0.0f,1.0f,0.0f);
+
+    // Orthonomal basis for screen
+    glm::vec3 tVecScreenR = glm::normalize(tPntScreenB - tPntScreenA);
+    glm::vec3 tVecScreenU = glm::normalize(tPntScreenC - tPntScreenA);
+    glm::vec3 tVecScreenN = glm::normalize(glm::cross(tVecScreenR,tVecScreenU));
+
+    // The users eye
+    glm::vec3 tPntEye;
+    glm::vec3 deltaTPntEye;
+
+    // Vector from eye to screen (set during runtime)
+    glm::vec3 tVecEyeScreenA;
+    glm::vec3 tVecEyeScreenB;
+    glm::vec3 tVecEyeScreenC;
+
+    // Distance from the eye to screen-space-origin (eye intersection on the normal)
+    GLfloat tDistEyeScreen;
+
+    // Distances from screen-space-origin to borders of the screen (Calculated at runtime)
+    GLfloat lDistScreen;
+    GLfloat rDistScreen;
+    GLfloat bDistScreen;
+    GLfloat tDistScreen;
+
+    // screen-space
+    // ------------
+
+    // Clipping distances
+    GLfloat nClipDist = 0.1f;
+    GLfloat fClipDist = 100.f;
+
+    tPntEye = glm::vec3(0.5f,0.5f,1.0f);
 
     // render loop
     // -----------
@@ -273,61 +188,70 @@ int main()
 
         // input
         // -----
-        processInput(window);
+
+        // reset vector
+        deltaTPntEye.x = 0.0f;
+        deltaTPntEye.y = 0.0f;
+        deltaTPntEye.z = 0.0f;
+        processInput(window,deltaTPntEye);
 
         // render
         // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-
-        // bind textures on corresponding texture units
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
 
         // activate shader
         ourShader.use();
 
-        // pass projection matrix to shader (note that in this case it could change every frame)
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-        ourShader.setMat4("projection", projection);
+        tPntEye += deltaTPntEye; 
+        std::cout << glm::to_string(tPntEye) << std::endl;
 
-        // camera/view transformation
-        glm::mat4 view = camera.GetViewMatrix();
-        ourShader.setMat4("view", view);
+        tVecEyeScreenA = tPntScreenA - tPntEye;
+        tVecEyeScreenB = tPntScreenB - tPntEye;
+        tVecEyeScreenC = tPntScreenC - tPntEye;
+
+        tDistEyeScreen = - glm::dot(tVecScreenN,tVecEyeScreenA);
+        GLfloat scaleFactor = nClipDist/tDistEyeScreen;
+        lDistScreen = glm::dot(tVecScreenR,tVecEyeScreenA) * scaleFactor;
+        rDistScreen = glm::dot(tVecScreenR,tVecEyeScreenB) * scaleFactor;
+        bDistScreen = glm::dot(tVecScreenU,tVecEyeScreenA) * scaleFactor;
+        tDistScreen = glm::dot(tVecScreenU,tVecEyeScreenC) * scaleFactor;
+
+        // std::cout << " l: " << lDistScreen <<  " r: " << rDistScreen <<  " b: " << bDistScreen <<  " t: " << tDistScreen << std::endl;
 
         // render Room
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::scale(model,glm::vec3(5.0 * (float)WIDTH / (float)HEIGHT,5.0,5.0));
-        model =  glm::translate(model, glm::vec3(0,0,-2.75));
-        ourShader.setMat4("model",model);
+        // -----------
+        glm::mat4 projection = glm::frustum(lDistScreen, rDistScreen, bDistScreen, tDistScreen, nClipDist, fClipDist);
+
+        // From screen space to the XY plane (should be an indentity matrix currently)
+        glm::mat4 basis_change = glm::mat4(
+            tVecScreenR.x,tVecScreenR.y,tVecScreenR.z,0.0f,
+            tVecScreenU.x,tVecScreenU.y,tVecScreenU.z,0.0f,
+            tVecScreenN.x,tVecScreenN.y,tVecScreenN.z,0.0f,
+            0.0f,0.0f,0.0f,1.0f);
+
+        glm::mat4 translate = glm::mat4(
+            1.0f,0.0f,0.0f,-tPntEye.x,
+            0.0f,1.0f,0.0f,-tPntEye.y,
+            0.0f,0.0f,1.0f,-tPntEye.z,
+            0.0f,0.0f,0.0f,1.0f);
+
+        glm::mat4 tSpaceProjection = projection * basis_change * translate;
+        ourShader.setMat4("projection", tSpaceProjection);
+        ourShader.setMat4("view", glm::mat4(1.0f));
+        ourShader.setMat4("model",glm::translate(glm::mat4(1.0f),glm::vec3(0.0f,0.0f,0.0f)));
+
         glBindVertexArray(wallsVAO);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDrawElements(GL_TRIANGLES, sizeof(wallIndices), GL_UNSIGNED_INT, 0);
 
-        // render boxes
-        glBindVertexArray(cubeVAO);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        for (unsigned int i = 0; i < 10; i++)
-        {
-            // calculate the model matrix for each object and pass it to shader before drawing
-            glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-            model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * i;
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            ourShader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
-
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &cubeVAO);
-    glDeleteBuffers(1, &cubeVBO);
+    glDeleteVertexArrays(1, &wallsVAO);
+    glDeleteBuffers(1, &wallsVBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -335,22 +259,35 @@ int main()
     return 0;
 }
 
-
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
-{
+void processInput(GLFWwindow *window, glm::vec3& deltaTPntEye)
+{   
+    GLfloat tickChange = 0.01f;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        std::cout << "W" << std::endl;
+        deltaTPntEye.y =  tickChange;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        std::cout << "S" << std::endl;
+        deltaTPntEye.y = -tickChange;
+    }   
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        std::cout << "A" << std::endl;
+        deltaTPntEye.x = -tickChange;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        std::cout << "D" << std::endl;
+        deltaTPntEye.x = tickChange;
+    }
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+        std::cout << "Z" << std::endl;
+        deltaTPntEye.z = tickChange;
+    }
+    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+        std::cout << "X" << std::endl;
+        deltaTPntEye.z = -tickChange;
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -360,35 +297,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
-}
-
-
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
-{
-    float xpos = static_cast<float>(xposIn);
-    float ypos = static_cast<float>(yposIn);
-
-    if (firstMouse)
-    {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-    lastX = xpos;
-    lastY = ypos;
-
-    camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }

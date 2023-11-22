@@ -105,7 +105,7 @@
         in ''
           glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible 
           echo ${includePaths}
-          g++ ${gccBuildLibLocations} ${gccBuildLibs} ${sourceFiles} ${includePaths} -o volumetricSim 
+          g++ -Wall ${gccBuildLibLocations} ${gccBuildLibs} ${sourceFiles} ${includePaths} -o volumetricSim 
         '';
 
         installPhase = ''
