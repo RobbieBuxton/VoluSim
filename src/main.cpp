@@ -16,7 +16,7 @@
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window, glm::vec3& deltaTPntEye);
+void processInput(GLFWwindow *window, glm::vec3& peChange);
 
 // timing
 GLfloat deltaTime = 0.0f;	// time between current frame and last frame
@@ -139,42 +139,31 @@ int main()
     // tracker-space
     // -------------
 
-    // Three corners of the screen
-    glm::vec3 tPntScreenA = glm::vec3(0.0f,0.0f,0.0f);
-    glm::vec3 tPntScreenB = glm::vec3(1.0f,0.0f,0.0f);
-    glm::vec3 tPntScreenC = glm::vec3(0.0f,1.0f,0.0f);
+    // Robbie's Screen 
+    // Width = 70.5cm
+    // Height = 39.5cm
+    // Head Distance
+    GLfloat screenHeight = 39.5f;
+    GLfloat screenWidth =  70.5f;
+    GLfloat headDistance = 50.0f;
+
+    // Initial States
+    glm::vec3 pa = glm::vec3(-screenWidth/2,-screenHeight/2,-headDistance);
+    glm::vec3 pb = glm::vec3( screenWidth/2,-screenHeight/2,-headDistance);
+    glm::vec3 pc = glm::vec3(-screenWidth/2, screenHeight/2,-headDistance);
+    glm::vec3 pe = glm::vec3(0.0f,0.0f,0.0f);
 
     // Orthonomal basis for screen
-    glm::vec3 tVecScreenR = glm::normalize(tPntScreenB - tPntScreenA);
-    glm::vec3 tVecScreenU = glm::normalize(tPntScreenC - tPntScreenA);
-    glm::vec3 tVecScreenN = glm::normalize(glm::cross(tVecScreenR,tVecScreenU));
-
-    // The users eye
-    glm::vec3 tPntEye;
-    glm::vec3 deltaTPntEye;
-
-    // Vector from eye to screen (set during runtime)
-    glm::vec3 tVecEyeScreenA;
-    glm::vec3 tVecEyeScreenB;
-    glm::vec3 tVecEyeScreenC;
-
-    // Distance from the eye to screen-space-origin (eye intersection on the normal)
-    GLfloat tDistEyeScreen;
-
-    // Distances from screen-space-origin to borders of the screen (Calculated at runtime)
-    GLfloat lDistScreen;
-    GLfloat rDistScreen;
-    GLfloat bDistScreen;
-    GLfloat tDistScreen;
-
-    // screen-space
-    // ------------
+    glm::vec3 vr = pb - pa;
+    vr = glm::normalize(vr);
+    glm::vec3 vu = pc - pa;
+    vu = glm::normalize(vu);
+    glm::vec3 vn = glm::cross(vr,vu);
+    vn = glm::normalize(vn);
 
     // Clipping distances
-    GLfloat nClipDist = 0.1f;
-    GLfloat fClipDist = 100.f;
-
-    tPntEye = glm::vec3(0.5f,0.5f,1.0f);
+    GLfloat n = 0.1f;
+    GLfloat f = 100.0f;
 
     // render loop
     // -----------
@@ -189,11 +178,8 @@ int main()
         // input
         // -----
 
-        // reset vector
-        deltaTPntEye.x = 0.0f;
-        deltaTPntEye.y = 0.0f;
-        deltaTPntEye.z = 0.0f;
-        processInput(window,deltaTPntEye);
+        glm::vec3 peChange = glm::vec3(0.0f,0.0f,0.0f);
+        processInput(window,peChange);
 
         // render
         // ------
@@ -203,43 +189,44 @@ int main()
         // activate shader
         ourShader.use();
 
-        tPntEye += deltaTPntEye; 
-        std::cout << glm::to_string(tPntEye) << std::endl;
+        pe += peChange; 
+        std::cout << glm::to_string(pe) << std::endl;
 
-        tVecEyeScreenA = tPntScreenA - tPntEye;
-        tVecEyeScreenB = tPntScreenB - tPntEye;
-        tVecEyeScreenC = tPntScreenC - tPntEye;
+        glm::vec3 va = pa - pe;
+        glm::vec3 vb = pb - pe;
+        glm::vec3 vc = pc - pe;
 
-        tDistEyeScreen = - glm::dot(tVecScreenN,tVecEyeScreenA);
-        GLfloat scaleFactor = nClipDist/tDistEyeScreen;
-        lDistScreen = glm::dot(tVecScreenR,tVecEyeScreenA) * scaleFactor;
-        rDistScreen = glm::dot(tVecScreenR,tVecEyeScreenB) * scaleFactor;
-        bDistScreen = glm::dot(tVecScreenU,tVecEyeScreenA) * scaleFactor;
-        tDistScreen = glm::dot(tVecScreenU,tVecEyeScreenC) * scaleFactor;
+        GLfloat d = -glm::dot(vn,va);
 
-        // std::cout << " l: " << lDistScreen <<  " r: " << rDistScreen <<  " b: " << bDistScreen <<  " t: " << tDistScreen << std::endl;
+        GLfloat scaleFactor = n/d;
+        GLfloat l = glm::dot(vr,va) * scaleFactor;
+        GLfloat r = glm::dot(vr,vb) * scaleFactor;
+        GLfloat b = glm::dot(vu,va) * scaleFactor;
+        GLfloat t = glm::dot(vu,vc) * scaleFactor;
+
+        // std::cout << " l: " << l <<  " r: " << r <<  " b: " << b <<  " t: " << t << " n: " << n <<  " f: " << f << std::endl;
 
         // render Room
         // -----------
-        glm::mat4 projection = glm::frustum(lDistScreen, rDistScreen, bDistScreen, tDistScreen, nClipDist, fClipDist);
+        glm::mat4 projection = glm::frustum(l, r, b, t, n, f);
 
         // From screen space to the XY plane (should be an indentity matrix currently)
         glm::mat4 basis_change = glm::mat4(
-            tVecScreenR.x,tVecScreenR.y,tVecScreenR.z,0.0f,
-            tVecScreenU.x,tVecScreenU.y,tVecScreenU.z,0.0f,
-            tVecScreenN.x,tVecScreenN.y,tVecScreenN.z,0.0f,
+            vr.x,vr.y,vr.z,0.0f,
+            vu.x,vu.y,vu.z,0.0f,
+            vn.x,vn.y,vn.z,0.0f,
             0.0f,0.0f,0.0f,1.0f);
+    
+        projection = glm::translate(projection,glm::vec3(-pe.x,-pe.y,-pe.z));
 
-        glm::mat4 translate = glm::mat4(
-            1.0f,0.0f,0.0f,-tPntEye.x,
-            0.0f,1.0f,0.0f,-tPntEye.y,
-            0.0f,0.0f,1.0f,-tPntEye.z,
-            0.0f,0.0f,0.0f,1.0f);
+        // projection = projection * basis_change * translate;
 
-        glm::mat4 tSpaceProjection = projection * basis_change * translate;
-        ourShader.setMat4("projection", tSpaceProjection);
+        ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", glm::mat4(1.0f));
-        ourShader.setMat4("model",glm::translate(glm::mat4(1.0f),glm::vec3(0.0f,0.0f,0.0f)));
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(glm::scale(model,glm::vec3(screenWidth/2,screenHeight/2,1.0f)), glm::vec3(0.0f,0.0f,-(headDistance)));
+        ourShader.setMat4("model",model);
 
         glBindVertexArray(wallsVAO);
         glDrawElements(GL_TRIANGLES, sizeof(wallIndices), GL_UNSIGNED_INT, 0);
@@ -259,34 +246,34 @@ int main()
     return 0;
 }
 
-void processInput(GLFWwindow *window, glm::vec3& deltaTPntEye)
+void processInput(GLFWwindow *window, glm::vec3& peChange)
 {   
-    GLfloat tickChange = 0.01f;
+    GLfloat tickChange = 0.5f;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        std::cout << "W" << std::endl;
-        deltaTPntEye.y =  tickChange;
+        // std::cout << "W" << std::endl;
+        peChange.y =  tickChange;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        std::cout << "S" << std::endl;
-        deltaTPntEye.y = -tickChange;
+        // std::cout << "S" << std::endl;
+        peChange.y = -tickChange;
     }   
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        std::cout << "A" << std::endl;
-        deltaTPntEye.x = -tickChange;
+        // std::cout << "A" << std::endl;
+        peChange.x = -tickChange;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        std::cout << "D" << std::endl;
-        deltaTPntEye.x = tickChange;
+        // std::cout << "D" << std::endl;
+        peChange.x = tickChange;
     }
     if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
-        std::cout << "Z" << std::endl;
-        deltaTPntEye.z = tickChange;
+        // std::cout << "Z" << std::endl;
+        peChange.z = tickChange;
     }
     if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-        std::cout << "X" << std::endl;
-        deltaTPntEye.z = -tickChange;
+        // std::cout << "X" << std::endl;
+        peChange.z = -tickChange;
     }
 }
 
