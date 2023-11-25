@@ -6,18 +6,17 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <k4a/k4a.h>
+#include <iostream>
 
-#include "camera.hpp"
+#include "main.hpp"
+#include "display.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
 
-#include <iostream>
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window, glm::vec3& peChange);
 
 // timing
-GLfloat deltaTime = 0.0f;	// time between current frame and last frame
+GLfloat deltaTime = 0.0f; // time between current frame and last frame
 GLfloat lastFrame = 0.0f;
 
 // The MAIN function, from here we start the application and run the game loop
@@ -29,7 +28,9 @@ int main()
     {
         printf("No k4a devices attached!\n");
         return 1;
-    } else {
+    }
+    else
+    {
         printf("k4a device attached!\n");
     }
 
@@ -52,7 +53,7 @@ int main()
     GLuint HEIGHT = 1080;
 
     // Create a GLFWwindow object that we can use for GLFW's functions
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
     glfwMakeContextCurrent(window);
     if (window == NULL)
     {
@@ -91,17 +92,16 @@ int main()
     // set up vertex data (and buffer(s)) and configure vertex attributes for walls
     // ---------------------------------------------------------------------------
     float wallsVertices[] = {
-        -0.5f, -0.5f,  0.0f,
-         0.5f, -0.5f,  0.0f,
-        -0.5f,  0.5f,  0.0f,
-         0.5f,  0.5f,  0.0f,
+        -0.5f, -0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f,
+        -0.5f, 0.5f, 0.0f,
+        0.5f, 0.5f, 0.0f,
         -0.5f, -0.5f, -1.0f,
-         0.5f, -0.5f, -1.0f,
-        -0.5f,  0.5f, -1.0f,
-         0.5f,  0.5f, -1.0f
-    };
+        0.5f, -0.5f, -1.0f,
+        -0.5f, 0.5f, -1.0f,
+        0.5f, 0.5f, -1.0f};
 
-    unsigned int wallIndices[] = { 
+    unsigned int wallIndices[] = {
         // Back Wall
         4, 5, 7,
         4, 6, 7,
@@ -113,8 +113,7 @@ int main()
         5, 7, 3,
         // Floor
         4, 5, 1,
-        4, 0, 1
-    };  
+        4, 0, 1};
 
     // world space positions of our walls
     unsigned int wallsVBO, wallsVAO, wallsEBO;
@@ -131,38 +130,17 @@ int main()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(wallIndices), wallIndices, GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    // tracker-space
-    // -------------
-
-    // Robbie's Screen 
+    // Robbie's Screen
     // Width = 70.5cm
     // Height = 39.5cm
-    // Head Distance
-    GLfloat screenHeight = 39.5f;
-    GLfloat screenDepth = 39.5f;
-    GLfloat screenWidth =  70.5f;
-    GLfloat headDistance = 50.0f;
+    Display Display(glm::vec3(0.0f,0.f,0.f),70.5f,39.5f,39.5f,0.1f,500.0f);
 
-    // Initial States (assuming that pa,pb,pc are all on the unit vectors)
-    glm::vec3 pa = glm::vec3(-screenWidth/2,-screenHeight/2,0.0f);
-    glm::vec3 pb = glm::vec3( screenWidth/2,-screenHeight/2,0.0f);
-    glm::vec3 pc = glm::vec3(-screenWidth/2, screenHeight/2,0.0f);
-    glm::vec3 pe = glm::vec3(0.0f,0.0f,headDistance);
+    // Head distance 50cm 
+    glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
 
-    // Orthonomal basis for screen
-    glm::vec3 vr = pb - pa;
-    vr = glm::normalize(vr);
-    glm::vec3 vu = pc - pa;
-    vu = glm::normalize(vu);
-    glm::vec3 vn = glm::cross(vr,vu);
-    vn = glm::normalize(vn);
-
-    // Clipping distances
-    GLfloat n = 0.1f;
-    GLfloat f = 500.0f;
 
     // render loop
     // -----------
@@ -177,40 +155,24 @@ int main()
         // input
         // -----
 
-        glm::vec3 peChange = glm::vec3(0.0f,0.0f,0.0f);
-        processInput(window,peChange);
+        glm::vec3 peChange = glm::vec3(0.0f, 0.0f, 0.0f);
+        processInput(window, peChange);
 
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // activate shader
         ourShader.use();
 
-        pe += peChange; 
-        // std::cout << glm::to_string(pe) << std::endl;
-
-        glm::vec3 va = pa - pe;
-        glm::vec3 vb = pb - pe;
-        glm::vec3 vc = pc - pe;
-
-        GLfloat d = -glm::dot(vn,va);
-
-        GLfloat scaleFactor = n/d;
-        GLfloat l = glm::dot(vr,va) * scaleFactor;
-        GLfloat r = glm::dot(vr,vb) * scaleFactor;
-        GLfloat b = glm::dot(vu,va) * scaleFactor;
-        GLfloat t = glm::dot(vu,vc) * scaleFactor;
-
-        // This is missing the required basis change (i.e assuming the screen will be already on the unit vectors)
-        glm::mat4 projection = glm::translate(glm::frustum(l, r, b, t, n, f),glm::vec3(-pe.x,-pe.y,-pe.z));
-
-        ourShader.setMat4("projection", projection);
+        pe += peChange;
+       
+        ourShader.setMat4("projection", Display.ProjectionToEye(pe));
         ourShader.setMat4("view", glm::mat4(1.0f));
 
-        glm::mat4 model = glm::scale(glm::mat4(1.0f),glm::vec3(screenWidth, screenHeight, screenDepth));
-        ourShader.setMat4("model",model);
+        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        ourShader.setMat4("model", model);
 
         glBindVertexArray(wallsVAO);
         glDrawElements(GL_TRIANGLES, sizeof(wallIndices), GL_UNSIGNED_INT, 0);
@@ -230,32 +192,38 @@ int main()
     return 0;
 }
 
-void processInput(GLFWwindow *window, glm::vec3& peChange)
-{   
+void processInput(GLFWwindow *window, glm::vec3 &peChange)
+{
     GLfloat tickChange = 0.5f;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    {
         // std::cout << "W" << std::endl;
-        peChange.y =  tickChange;
+        peChange.y = tickChange;
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    {
         // std::cout << "S" << std::endl;
         peChange.y = -tickChange;
-    }   
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
         // std::cout << "A" << std::endl;
         peChange.x = -tickChange;
     }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
         // std::cout << "D" << std::endl;
         peChange.x = tickChange;
     }
-    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+    {
         // std::cout << "Z" << std::endl;
         peChange.z = tickChange;
     }
-    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+    {
         // std::cout << "X" << std::endl;
         peChange.z = -tickChange;
     }
@@ -263,9 +231,9 @@ void processInput(GLFWwindow *window, glm::vec3& peChange)
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
-    // make sure the viewport matches the new window dimensions; note that width and 
+    // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
