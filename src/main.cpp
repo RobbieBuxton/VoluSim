@@ -1,7 +1,5 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -93,14 +91,14 @@ int main()
     // set up vertex data (and buffer(s)) and configure vertex attributes for walls
     // ---------------------------------------------------------------------------
     float wallsVertices[] = {
-        -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-        -1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f
+        -0.5f, -0.5f,  0.0f,
+         0.5f, -0.5f,  0.0f,
+        -0.5f,  0.5f,  0.0f,
+         0.5f,  0.5f,  0.0f,
+        -0.5f, -0.5f, -1.0f,
+         0.5f, -0.5f, -1.0f,
+        -0.5f,  0.5f, -1.0f,
+         0.5f,  0.5f, -1.0f
     };
 
     unsigned int wallIndices[] = { 
@@ -144,14 +142,15 @@ int main()
     // Height = 39.5cm
     // Head Distance
     GLfloat screenHeight = 39.5f;
+    GLfloat screenDepth = 39.5f;
     GLfloat screenWidth =  70.5f;
     GLfloat headDistance = 50.0f;
 
-    // Initial States
-    glm::vec3 pa = glm::vec3(-screenWidth/2,-screenHeight/2,-headDistance);
-    glm::vec3 pb = glm::vec3( screenWidth/2,-screenHeight/2,-headDistance);
-    glm::vec3 pc = glm::vec3(-screenWidth/2, screenHeight/2,-headDistance);
-    glm::vec3 pe = glm::vec3(0.0f,0.0f,0.0f);
+    // Initial States (assuming that pa,pb,pc are all on the unit vectors)
+    glm::vec3 pa = glm::vec3(-screenWidth/2,-screenHeight/2,0.0f);
+    glm::vec3 pb = glm::vec3( screenWidth/2,-screenHeight/2,0.0f);
+    glm::vec3 pc = glm::vec3(-screenWidth/2, screenHeight/2,0.0f);
+    glm::vec3 pe = glm::vec3(0.0f,0.0f,headDistance);
 
     // Orthonomal basis for screen
     glm::vec3 vr = pb - pa;
@@ -163,7 +162,7 @@ int main()
 
     // Clipping distances
     GLfloat n = 0.1f;
-    GLfloat f = 100.0f;
+    GLfloat f = 500.0f;
 
     // render loop
     // -----------
@@ -190,7 +189,7 @@ int main()
         ourShader.use();
 
         pe += peChange; 
-        std::cout << glm::to_string(pe) << std::endl;
+        // std::cout << glm::to_string(pe) << std::endl;
 
         glm::vec3 va = pa - pe;
         glm::vec3 vb = pb - pe;
@@ -204,28 +203,13 @@ int main()
         GLfloat b = glm::dot(vu,va) * scaleFactor;
         GLfloat t = glm::dot(vu,vc) * scaleFactor;
 
-        // std::cout << " l: " << l <<  " r: " << r <<  " b: " << b <<  " t: " << t << " n: " << n <<  " f: " << f << std::endl;
-
-        // render Room
-        // -----------
-        glm::mat4 projection = glm::frustum(l, r, b, t, n, f);
-
-        // From screen space to the XY plane (should be an indentity matrix currently)
-        glm::mat4 basis_change = glm::mat4(
-            vr.x,vr.y,vr.z,0.0f,
-            vu.x,vu.y,vu.z,0.0f,
-            vn.x,vn.y,vn.z,0.0f,
-            0.0f,0.0f,0.0f,1.0f);
-    
-        projection = glm::translate(projection,glm::vec3(-pe.x,-pe.y,-pe.z));
-
-        // projection = projection * basis_change * translate;
+        // This is missing the required basis change (i.e assuming the screen will be already on the unit vectors)
+        glm::mat4 projection = glm::translate(glm::frustum(l, r, b, t, n, f),glm::vec3(-pe.x,-pe.y,-pe.z));
 
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", glm::mat4(1.0f));
 
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(glm::scale(model,glm::vec3(screenWidth/2,screenHeight/2,1.0f)), glm::vec3(0.0f,0.0f,-(headDistance)));
+        glm::mat4 model = glm::scale(glm::mat4(1.0f),glm::vec3(screenWidth, screenHeight, screenDepth));
         ourShader.setMat4("model",model);
 
         glBindVertexArray(wallsVAO);

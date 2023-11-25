@@ -84,6 +84,7 @@
 
           # Libs
           k4a.packages.${system}.libk4a-dev
+          k4a.packages.${system}.k4a-tools
           pkgs.glfw
           pkgs.glm
           pkgs.stb
