@@ -8,7 +8,7 @@ class Display
 {
 public:
     Display(glm::vec3 origin, GLfloat width, GLfloat height, GLfloat depth, GLfloat nearClip, GLfloat farClip);
-    glm::mat4 ProjectionToEye(glm::vec3 eye);
+    glm::mat4 projectionToEye(glm::vec3 eye);
 
     const GLfloat width;
     const GLfloat height;

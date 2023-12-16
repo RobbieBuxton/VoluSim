@@ -14,7 +14,7 @@ Display::Display(glm::vec3 origin, GLfloat width, GLfloat height, GLfloat depth,
     vn = glm::normalize(glm::cross(vr, vu));
 }
 
-glm::mat4 Display::ProjectionToEye(glm::vec3 eye){
+glm::mat4 Display::projectionToEye(glm::vec3 eye){
     glm::vec3 va = pa - eye;
     glm::vec3 vb = pb - eye;
     glm::vec3 vc = pc - eye;

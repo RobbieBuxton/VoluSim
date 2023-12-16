@@ -7,13 +7,14 @@
 #include <glm/gtx/string_cast.hpp>
 #include <k4a/k4a.h>
 #include <iostream>
+#include <unistd.h>
+#include <exception>
 
 #include "main.hpp"
 #include "display.hpp"
+#include "kinect.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
-
-
 
 // timing
 GLfloat deltaTime = 0.0f; // time between current frame and last frame
@@ -22,16 +23,27 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-    // Check for Kinects
-    uint32_t count = k4a_device_get_installed_count();
-    if (count == 0)
+
+    if (geteuid() != 0)
     {
-        printf("No k4a devices attached!\n");
+        std::cout << "ERROR: Application needs root to be able to use Kinect" << std::endl;
         return 1;
     }
-    else
+
+    std::unique_ptr<Kinect> myKinect;
+    try
     {
-        printf("k4a device attached!\n");
+        myKinect = std::make_unique<Kinect>();
+        for (int ii = 0; ii < 100; ii++)
+        {
+            myKinect->readFrame();
+        }
+        myKinect->close();
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << "ERROR: " << e.what() << std::endl;
+        // handle the exception if necessary
     }
 
     std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
@@ -136,11 +148,10 @@ int main()
     // Robbie's Screen
     // Width = 70.5cm
     // Height = 39.5cm
-    Display Display(glm::vec3(0.0f,0.f,0.f),70.5f,39.5f,39.5f,0.1f,500.0f);
+    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 39.5f, 0.1f, 500.0f);
 
-    // Head distance 50cm 
+    // Head distance 50cm
     glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
-
 
     // render loop
     // -----------
@@ -167,8 +178,8 @@ int main()
         ourShader.use();
 
         pe += peChange;
-       
-        ourShader.setMat4("projection", Display.ProjectionToEye(pe));
+
+        ourShader.setMat4("projection", Display.projectionToEye(pe));
         ourShader.setMat4("view", glm::mat4(1.0f));
 
         glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));

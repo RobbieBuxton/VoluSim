@@ -101,7 +101,7 @@
           gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a";
           openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
           gladBuildDir = "build/glad";
-          sourceFiles = "src/main.cpp src/display.cpp ${gladBuildDir}/src/gl.c";
+          sourceFiles = "src/main.cpp src/display.cpp src/kinect.cpp ${gladBuildDir}/src/gl.c";
           includePaths = "-I ${gladBuildDir}/include -I ${k4a.packages.${system}.libk4a-dev}/include -I include";
         in ''
           glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible 
