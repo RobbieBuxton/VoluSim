@@ -22,7 +22,7 @@
       k4a.packages.${system}.libk4a-dev
       k4a.packages.${system}.k4a-tools
 
-      #Setup and windown
+      #Setup and window
       pkgs.gcc
       pkgs.python310Packages.glad2
       pkgs.glxinfo
@@ -30,6 +30,7 @@
       pkgs.jq
       
       # Libs
+      (pkgs.opencv.override { enableGtk2 = true; })
       pkgs.glfw
       pkgs.glm
       pkgs.stb
@@ -50,6 +51,7 @@
               "${pkgs.glfw}/include"
               "${pkgs.glm}/include"
               "${pkgs.stb}/include"
+              "${pkgs.opencv}/include/opencv4"
               "${k4a.packages.${system}.libk4a-dev}/include"
             ]; 
             defines = []; 
@@ -83,6 +85,7 @@
           pkgs.glxinfo
 
           # Libs
+          (pkgs.opencv.override { enableGtk2 = true; })
           k4a.packages.${system}.libk4a-dev
           k4a.packages.${system}.k4a-tools
           pkgs.glfw
@@ -98,11 +101,11 @@
 
         buildPhase = let
           gccBuildLibLocations = "-L ${k4a.packages.${system}.libk4a-dev}/lib/x86_64-linux-gnu";
-          gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a";
+          gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs";
           openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
           gladBuildDir = "build/glad";
           sourceFiles = "src/main.cpp src/display.cpp src/kinect.cpp ${gladBuildDir}/src/gl.c";
-          includePaths = "-I ${gladBuildDir}/include -I ${k4a.packages.${system}.libk4a-dev}/include -I include";
+          includePaths = "-I ${pkgs.opencv}/include/opencv4 -I ${gladBuildDir}/include -I ${k4a.packages.${system}.libk4a-dev}/include -I include";
         in ''
           glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible 
           echo ${includePaths}

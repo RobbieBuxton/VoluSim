@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-Display::Display(glm::vec3 origin, GLfloat width, GLfloat height, GLfloat depth, GLfloat nearClip, GLfloat farClip) : origin(origin), width(width), height(height), depth(depth), nearClip(nearClip), farClip(farClip)
+Display::Display(glm::vec3 origin, GLfloat width, GLfloat height, GLfloat depth, GLfloat nearClip, GLfloat farClip) : width(width), height(height), depth(depth), origin(origin), nearClip(nearClip), farClip(farClip)
 {
     pa = origin + glm::vec3(-width / 2, -height / 2, 0.0f);
     pb = origin + glm::vec3(width / 2, -height / 2, 0.0f);

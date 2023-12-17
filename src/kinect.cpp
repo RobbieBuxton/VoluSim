@@ -96,7 +96,7 @@ void Kinect::readFrame()
     }
 
     // Access the depth16 image
-    k4a_image_t image = k4a_capture_get_depth_image(capture);
+    k4a_image_t image = k4a_capture_get_color_image(capture);
     if (image != NULL)
     {
         printf(" | Depth16 res:%4dx%4d stride:%5d\n",
