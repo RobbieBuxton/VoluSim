@@ -10,7 +10,8 @@
   let 
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
-    
+    opencv = (pkgs.opencv.override { enableGtk2 = true; });
+    dlib = (pkgs.dlib.override { guiSupport = true; });
   in
   {
   # Development shell used by running "nix develop".
@@ -30,7 +31,8 @@
       pkgs.jq
       
       # Libs
-      (pkgs.opencv.override { enableGtk2 = true; })
+      dlib
+      opencv
       pkgs.glfw
       pkgs.glm
       pkgs.stb
@@ -51,7 +53,8 @@
               "${pkgs.glfw}/include"
               "${pkgs.glm}/include"
               "${pkgs.stb}/include"
-              "${pkgs.opencv}/include/opencv4"
+              "${opencv}/include/opencv4"
+              "${dlib}/include"
               "${k4a.packages.${system}.libk4a-dev}/include"
             ]; 
             defines = []; 
@@ -85,7 +88,10 @@
           pkgs.glxinfo
 
           # Libs
-          (pkgs.opencv.override { enableGtk2 = true; })
+          dlib
+          pkgs.libpng
+          pkgs.libjpeg
+          opencv
           k4a.packages.${system}.libk4a-dev
           k4a.packages.${system}.k4a-tools
           pkgs.glfw
@@ -101,15 +107,15 @@
 
         buildPhase = let
           gccBuildLibLocations = "-L ${k4a.packages.${system}.libk4a-dev}/lib/x86_64-linux-gnu";
-          gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs";
+          gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -ldlib";
           openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
           gladBuildDir = "build/glad";
           sourceFiles = "src/main.cpp src/display.cpp src/kinect.cpp ${gladBuildDir}/src/gl.c";
-          includePaths = "-I ${pkgs.opencv}/include/opencv4 -I ${gladBuildDir}/include -I ${k4a.packages.${system}.libk4a-dev}/include -I include";
+          includePaths = "-I ${dlib}/include -I ${opencv}/include/opencv4 -I ${gladBuildDir}/include -I ${k4a.packages.${system}.libk4a-dev}/include -I include";
         in ''
           glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible 
           echo ${includePaths}
-          g++ -Wall ${gccBuildLibLocations} ${gccBuildLibs} ${sourceFiles} ${includePaths} -o volumetricSim 
+          g++ -Wall ${gccBuildLibLocations} ${sourceFiles} ${gccBuildLibs} ${includePaths} -o volumetricSim 
         '';
 
         installPhase = ''

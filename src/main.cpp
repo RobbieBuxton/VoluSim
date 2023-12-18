@@ -12,6 +12,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/core/cuda.hpp>
 
 #include "main.hpp"
 #include "display.hpp"
@@ -26,6 +27,10 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
+
+    int num_devices = cv::cuda::getCudaEnabledDeviceCount();
+    std::cout << "Number of CUDA devices detected: " << num_devices << std::endl;
+
     if (geteuid() != 0)
     {
         std::cout << "ERROR: Application needs root to be able to use Kinect" << std::endl;
@@ -36,11 +41,11 @@ int main()
     try
     {
         myKinect = std::make_unique<Kinect>();
-        for (int ii = 0; ii < 1000; ii++)
+        for (int ii = 0; ii < 200; ii++)
         {
             cv::namedWindow("Color Image", cv::WINDOW_NORMAL);
-            cv::namedWindow("Depth Image", cv::WINDOW_NORMAL);
-            cv::namedWindow("IR Image", cv::WINDOW_NORMAL);
+            // cv::namedWindow("Depth Image", cv::WINDOW_NORMAL);
+            // cv::namedWindow("IR Image", cv::WINDOW_NORMAL);
             myKinect->readFrame();
         }
         myKinect->close();
