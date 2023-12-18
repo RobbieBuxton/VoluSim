@@ -26,20 +26,6 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-    std::string image_path = cv::samples::findFile("/home/robbieb/Pictures/starry_night.jpg");
-    cv::Mat img = cv::imread(image_path, cv::IMREAD_COLOR);
-    if(img.empty())
-    {
-        std::cout << "Could not read the image: " << image_path << std::endl;
-        return 1;
-    }
-    cv::imshow("Display window", img);
-    int k = cv::waitKey(0); // Wait for a keystroke in the window
-    if(k == 's')
-    {
-        cv::imwrite("/home/robbieb/Pictures/starry_night.png", img);
-    }
-
     if (geteuid() != 0)
     {
         std::cout << "ERROR: Application needs root to be able to use Kinect" << std::endl;
@@ -50,11 +36,15 @@ int main()
     try
     {
         myKinect = std::make_unique<Kinect>();
-        for (int ii = 0; ii < 100; ii++)
+        for (int ii = 0; ii < 1000; ii++)
         {
+            cv::namedWindow("Color Image", cv::WINDOW_NORMAL);
+            cv::namedWindow("Depth Image", cv::WINDOW_NORMAL);
+            cv::namedWindow("IR Image", cv::WINDOW_NORMAL);
             myKinect->readFrame();
         }
         myKinect->close();
+        return 0;
     }
     catch (const std::exception &e)
     {
