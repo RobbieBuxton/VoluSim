@@ -27,7 +27,7 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-
+    std::cout << cv::getBuildInformation() << std::endl;
     int num_devices = cv::cuda::getCudaEnabledDeviceCount();
     std::cout << "Number of CUDA devices detected: " << num_devices << std::endl;
 
@@ -41,7 +41,7 @@ int main()
     try
     {
         myKinect = std::make_unique<Kinect>();
-        for (int ii = 0; ii < 200; ii++)
+        for (int ii = 0; ii < 10; ii++)
         {
             cv::namedWindow("Color Image", cv::WINDOW_NORMAL);
             // cv::namedWindow("Depth Image", cv::WINDOW_NORMAL);

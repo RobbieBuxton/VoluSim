@@ -2,14 +2,14 @@
   description = "A volumetric screen simulation";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/23.11";
     k4a.url = "github:RobbieBuxton/k4a-nix";
   };
 
   outputs = { self, nixpkgs, k4a}: 
   let 
     system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
+    pkgs = import nixpkgs { inherit system; config.cudaSupport = true; config.allowUnfree = true; };
     opencv = (pkgs.opencv.override { enableGtk2 = true; });
     dlib = (pkgs.dlib.override { guiSupport = true; });
   in
@@ -33,12 +33,17 @@
       # Libs
       dlib
       opencv
+      pkgs.cudatoolkit # Both as sus
+      pkgs.linuxPackages.nvidia_x11 # Both as sus
       pkgs.glfw
       pkgs.glm
       pkgs.stb
       pkgs.xorg.libX11
       pkgs.xorg.libXrandr
       pkgs.xorg.libXi
+
+      # Debug 
+      pkgs.dpkg
     ];
 
     shellHook = let
@@ -92,6 +97,8 @@
           pkgs.libpng
           pkgs.libjpeg
           opencv
+          pkgs.cudatoolkit # Both as sus
+          pkgs.linuxPackages.nvidia_x11 # Both as sus
           k4a.packages.${system}.libk4a-dev
           k4a.packages.${system}.k4a-tools
           pkgs.glfw
@@ -107,7 +114,8 @@
 
         buildPhase = let
           gccBuildLibLocations = "-L ${k4a.packages.${system}.libk4a-dev}/lib/x86_64-linux-gnu";
-          gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -ldlib";
+          opencvBuildLibs = "-lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs ";
+          gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a ${opencvBuildLibs} -ldlib -lcudart -lcuda";
           openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
           gladBuildDir = "build/glad";
           sourceFiles = "src/main.cpp src/display.cpp src/kinect.cpp ${gladBuildDir}/src/gl.c";
