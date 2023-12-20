@@ -37,28 +37,6 @@ int main()
         return 1;
     }
 
-    std::unique_ptr<Kinect> myKinect;
-    try
-    {
-        myKinect = std::make_unique<Kinect>();
-        cv::namedWindow("Color Image", cv::WINDOW_NORMAL);
-        // cv::namedWindow("Depth Image", cv::WINDOW_NORMAL);
-        // cv::namedWindow("IR Image", cv::WINDOW_NORMAL);
-        for (int ii = 0; ii < 1000; ii++)
-        {
-           
-         
-            myKinect->readFrame();
-        }
-        myKinect->close();
-        return 0;
-    }
-    catch (const std::exception &e)
-    {
-        std::cout << "ERROR: " << e.what() << std::endl;
-        // handle the exception if necessary
-    }
-
     std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
     // Init GLFW
     glfwInit();
@@ -74,8 +52,8 @@ int main()
     // GLuint WIDTH = mode->width;
     // GLuint HEIGHT = mode->height;
 
-    GLuint WIDTH = 1920;
-    GLuint HEIGHT = 1080;
+    GLuint WIDTH = 3840;
+    GLuint HEIGHT = 2160;
 
     // Create a GLFWwindow object that we can use for GLFW's functions
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -166,6 +144,10 @@ int main()
     // Head distance 50cm
     glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
 
+    std::unique_ptr<Kinect> myKinect;
+ 
+    myKinect = std::make_unique<Kinect>();
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -190,7 +172,11 @@ int main()
         // activate shader
         ourShader.use();
 
-        pe += peChange;
+        glm::vec3 kinect_pe = myKinect->readFrame();
+        if (kinect_pe != (glm::vec3(0,0,-1))) {
+            pe = kinect_pe;
+        }
+        std::cout << glm::to_string(pe) << std::endl;
 
         ourShader.setMat4("projection", Display.projectionToEye(pe));
         ourShader.setMat4("view", glm::mat4(1.0f));
@@ -204,6 +190,7 @@ int main()
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    myKinect->close();
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
