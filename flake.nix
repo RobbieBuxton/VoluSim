@@ -114,7 +114,7 @@
 
         buildPhase = let
           gccBuildLibLocations = "-L ${k4a.packages.${system}.libk4a-dev}/lib/x86_64-linux-gnu";
-          opencvBuildLibs = "-lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs ";
+          opencvBuildLibs = "-lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -lopencv_cudafeatures2d -lopencv_cudafilters -lopencv_cudawarping -lopencv_features2d  -lopencv_flann ";
           gccBuildLibs = "-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -ludev -lk4a ${opencvBuildLibs} -ldlib -lcudart -lcuda";
           openGLVersion = "glxinfo | grep -oP '(?<=OpenGL version string: )[0-9]+.?[0-9]'";
           gladBuildDir = "build/glad";

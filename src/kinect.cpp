@@ -6,6 +6,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/cudawarping.hpp>
 
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing/render_face_detections.h>
@@ -88,7 +89,7 @@ Kinect::Kinect()
         }
 
         detector = dlib::get_frontal_face_detector();
-        dlib::deserialize("/home/robbieb/Imperial/IndividualProject/VolumetricSim/data/shape_predictor_68_face_landmarks.dat") >> predictor;
+        dlib::deserialize("/home/robbieb/Imperial/IndividualProject/VolumetricSim/data/shape_predictor_5_face_landmarks.dat") >> predictor;
     }
 }
 
@@ -109,16 +110,13 @@ void Kinect::readFrame()
         return;
     }
 
-    
-    dlib::image_window win;
     // Display the color image
     k4a_image_t color_image = k4a_capture_get_color_image(capture);
     if (color_image != nullptr)
     {
         //This is pretty inefficent, needs a refactor to directly convert into bgr instead of bgra then bgr
+        cv::Mat bgraImage(k4a_image_get_height_pixels(color_image), k4a_image_get_width_pixels(color_image), CV_8UC4, k4a_image_get_buffer(color_image),(size_t)k4a_image_get_stride_bytes(color_image));
 
-        // Split the 4-channel image into separate channels
-        const cv::Mat bgraImage(k4a_image_get_height_pixels(color_image), k4a_image_get_width_pixels(color_image), CV_8UC4, k4a_image_get_buffer(color_image),(size_t)k4a_image_get_stride_bytes(color_image));
         std::vector<cv::Mat> channels;
         cv::split(bgraImage, channels);
 
@@ -126,43 +124,39 @@ void Kinect::readFrame()
         cv::Mat bgrImage;
         cv::merge(std::vector<cv::Mat>{channels[0], channels[1], channels[2]}, bgrImage);
 
-        dlib::cv_image<dlib::bgr_pixel> dlib_img = dlib::cv_image<dlib::bgr_pixel>(bgrImage);
+        cv::cuda::GpuMat bgrImageGpu(bgrImage);
+
+        int downscale_times = 2;
+        for (int i = 0; i < downscale_times; i++)
+        {
+            cv::cuda::pyrDown(bgrImageGpu,bgrImageGpu);
+        }
+
+        cv::Mat processedBgrImage(bgrImageGpu);
+
+        dlib::cv_image<dlib::bgr_pixel> dlib_img = dlib::cv_image<dlib::bgr_pixel>(processedBgrImage);
         auto dets = detector(dlib_img);
         std::cout << "Number of faces detected: " << dets.size() << std::endl;
 
-        // Now we will go ask the shape_predictor to tell us the pose of
-        // each face we detected.
         std::vector<dlib::full_object_detection> shapes;
         for (unsigned long j = 0; j < dets.size(); ++j)
         {
             dlib::full_object_detection shape = predictor(dlib_img, dets[j]);
-            std::cout << "number of parts: "<< shape.num_parts() << std::endl;
-            std::cout << "pixel position of first part:  " << shape.part(0) << std::endl;
-            std::cout << "pixel position of second part: " << shape.part(1) << std::endl;
-            // You get the idea, you can get all the face part locations if
-            // you want them.  Here we just store them in shapes so we can
-            // put them on the screen.
-            shapes.push_back(shape);
+            cv::Point leftEye((shape.part(0).x()+shape.part(1).x())/2.0,(shape.part(0).y()+shape.part(1).y())/2.0);
+            cv::Point rightEye((shape.part(2).x()+shape.part(3).x())/2.0,(shape.part(2).y()+shape.part(3).y())/2.0);
+            cv::circle(processedBgrImage, leftEye, 1, cv::Scalar(255, 0, 0), -1); 
+            cv::circle(processedBgrImage, rightEye, 1, cv::Scalar(255, 0, 0), -1); 
+            
         }
-
-        for (const auto& shape : shapes) {
-            // Draw circles at each facial landmark
-            for (int i = 36; i < 48; i++) {
-                // Get the position of the facial landmark
-                dlib::point pt = shape.part(i);
-
-                // Convert dlib point to OpenCV Point (x, y)
-                cv::Point cvPt(pt.x(), pt.y());
-
-                // Draw a circle at the facial landmark position
-                cv::circle(bgrImage, cvPt, 5, cv::Scalar(255, 0, 0), -1); // You can adjust circle size and color here
-            }
-        }
-
-        cv::imshow("Color Image", bgrImage);
+        
+        cv::imshow("Color Image", processedBgrImage);
         // Release the color_image
         k4a_image_release(color_image);
     }
+
+    cv::waitKey(1);
+    // Release the capture
+    k4a_capture_release(capture);
 
     // // Display the depth image
     // k4a_image_t depth_image = k4a_capture_get_depth_image(capture);
@@ -189,10 +183,6 @@ void Kinect::readFrame()
 
     //     k4a_image_release(ir_image);
     // }
-
-    cv::waitKey(1);
-    // Release the capture
-    k4a_capture_release(capture);
 }
 
 void Kinect::close()
