@@ -79,8 +79,9 @@ Kinect::Kinect()
         // Configure a stream of 4096x3072 BRGA color data at 15 frames per second
         k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
         config.camera_fps = K4A_FRAMES_PER_SECOND_30;
+        // BGRA is not native to kinect might be worth switching to MJPEG
         config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-        config.color_resolution = K4A_COLOR_RESOLUTION_1080P;
+        config.color_resolution = K4A_COLOR_RESOLUTION_2160P;
         config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
 
         if (K4A_RESULT_SUCCEEDED != k4a_device_start_cameras(device, &config))
@@ -114,8 +115,8 @@ void Kinect::readFrame()
     k4a_image_t color_image = k4a_capture_get_color_image(capture);
     if (color_image != nullptr)
     {
-        //This is pretty inefficent, needs a refactor to directly convert into bgr instead of bgra then bgr
-        cv::Mat bgraImage(k4a_image_get_height_pixels(color_image), k4a_image_get_width_pixels(color_image), CV_8UC4, k4a_image_get_buffer(color_image),(size_t)k4a_image_get_stride_bytes(color_image));
+        // This is pretty inefficent, needs a refactor to directly convert into bgr instead of bgra then bgr
+        cv::Mat bgraImage(k4a_image_get_height_pixels(color_image), k4a_image_get_width_pixels(color_image), CV_8UC4, k4a_image_get_buffer(color_image), (size_t)k4a_image_get_stride_bytes(color_image));
 
         std::vector<cv::Mat> channels;
         cv::split(bgraImage, channels);
@@ -126,10 +127,10 @@ void Kinect::readFrame()
 
         cv::cuda::GpuMat bgrImageGpu(bgrImage);
 
-        int downscale_times = 2;
-        for (int i = 0; i < downscale_times; i++)
+        int scale_factor = 2;
+        for (int i = 0; i < scale_factor; i++)
         {
-            cv::cuda::pyrDown(bgrImageGpu,bgrImageGpu);
+            cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
         }
 
         cv::Mat processedBgrImage(bgrImageGpu);
@@ -138,18 +139,21 @@ void Kinect::readFrame()
         auto dets = detector(dlib_img);
         std::cout << "Number of faces detected: " << dets.size() << std::endl;
 
-        std::vector<dlib::full_object_detection> shapes;
         for (unsigned long j = 0; j < dets.size(); ++j)
         {
             dlib::full_object_detection shape = predictor(dlib_img, dets[j]);
-            cv::Point leftEye((shape.part(0).x()+shape.part(1).x())/2.0,(shape.part(0).y()+shape.part(1).y())/2.0);
-            cv::Point rightEye((shape.part(2).x()+shape.part(3).x())/2.0,(shape.part(2).y()+shape.part(3).y())/2.0);
-            cv::circle(processedBgrImage, leftEye, 1, cv::Scalar(255, 0, 0), -1); 
-            cv::circle(processedBgrImage, rightEye, 1, cv::Scalar(255, 0, 0), -1); 
-            
+            cv::Point leftEye(
+                (shape.part(0).x() + shape.part(1).x()) * pow(2,scale_factor) / 2.0,
+                (shape.part(0).y() + shape.part(1).y()) * pow(2,scale_factor) / 2.0);
+            cv::Point rightEye(
+                (shape.part(2).x() + shape.part(3).x()) * pow(2,scale_factor) / 2.0,
+                (shape.part(2).y() + shape.part(3).y()) * pow(2,scale_factor) / 2.0);
+
+            cv::circle(bgrImage, leftEye, 5, cv::Scalar(255, 0, 0), -1);
+            cv::circle(bgrImage, rightEye, 5, cv::Scalar(255, 0, 0), -1);
         }
-        
-        cv::imshow("Color Image", processedBgrImage);
+
+        cv::imshow("Color Image", bgrImage);
         // Release the color_image
         k4a_image_release(color_image);
     }
