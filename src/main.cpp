@@ -16,7 +16,7 @@
 
 #include "main.hpp"
 #include "display.hpp"
-#include "kinect.hpp"
+#include "tracker.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
 
@@ -33,30 +33,8 @@ int main()
 
     if (geteuid() != 0)
     {
-        std::cout << "ERROR: Application needs root to be able to use Kinect" << std::endl;
+        std::cout << "ERROR: Application needs root to be able to use Tracker" << std::endl;
         return 1;
-    }
-
-    std::unique_ptr<Kinect> myKinect;
-    try
-    {
-        myKinect = std::make_unique<Kinect>();
-        cv::namedWindow("Color Image", cv::WINDOW_NORMAL);
-        // cv::namedWindow("Depth Image", cv::WINDOW_NORMAL);
-        // cv::namedWindow("IR Image", cv::WINDOW_NORMAL);
-        for (int ii = 0; ii < 1000; ii++)
-        {
-           
-         
-            myKinect->readFrame();
-        }
-        myKinect->close();
-        return 0;
-    }
-    catch (const std::exception &e)
-    {
-        std::cout << "ERROR: " << e.what() << std::endl;
-        // handle the exception if necessary
     }
 
     std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
@@ -74,8 +52,8 @@ int main()
     // GLuint WIDTH = mode->width;
     // GLuint HEIGHT = mode->height;
 
-    GLuint WIDTH = 1920;
-    GLuint HEIGHT = 1080;
+    GLuint WIDTH = 3840;
+    GLuint HEIGHT = 2160;
 
     // Create a GLFWwindow object that we can use for GLFW's functions
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -87,7 +65,7 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -161,10 +139,14 @@ int main()
     // Robbie's Screen
     // Width = 70.5cm
     // Height = 39.5cm
-    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 39.5f, 0.1f, 500.0f);
+    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 10.0f, 0.1f, 500.0f);
 
     // Head distance 50cm
     glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
+
+    std::unique_ptr<Tracker> myTracker;
+ 
+    myTracker = std::make_unique<Tracker>();
 
     // render loop
     // -----------
@@ -189,8 +171,17 @@ int main()
 
         // activate shader
         ourShader.use();
-
-        pe += peChange;
+    
+        try
+        {
+            pe = myTracker->readFrame();
+        }
+        catch(const std::exception& e)
+        {
+            std::cout << e.what() << '\n';
+        }
+        
+        std::cout << glm::to_string(pe) << std::endl;
 
         ourShader.setMat4("projection", Display.projectionToEye(pe));
         ourShader.setMat4("view", glm::mat4(1.0f));
@@ -255,7 +246,7 @@ void processInput(GLFWwindow *window, glm::vec3 &peChange)
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.

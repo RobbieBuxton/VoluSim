@@ -5,6 +5,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window, glm::vec3 &peChange);
 #endif
