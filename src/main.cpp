@@ -139,7 +139,7 @@ int main()
     // Robbie's Screen
     // Width = 70.5cm
     // Height = 39.5cm
-    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 39.5f, 0.1f, 500.0f);
+    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 10.0f, 0.1f, 500.0f);
 
     // Head distance 50cm
     glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);

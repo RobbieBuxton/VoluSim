@@ -84,10 +84,8 @@ Tracker::Tracker()
         printf("Opened device: %s\n", serial);
         free(serial);
 
-        // Configure a stream of 4096x3072 BRGA color data at 15 frames per second
         config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
         config.camera_fps = K4A_FRAMES_PER_SECOND_30;
-        // BGRA is not native to Tracker might be worth switching to MJPEG
         config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
         config.color_resolution = K4A_COLOR_RESOLUTION_720P;
         config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
@@ -155,6 +153,7 @@ glm::vec3 Tracker::readFrame()
         for (unsigned long j = 0; j < dets.size(); ++j)
         {
             dlib::full_object_detection shape = predictor(dlib_img, dets[j]);
+            // This is slightly inaccurate because down down pyramid has size Size((src.cols+1)/2, (src.rows+1)/2)
             cv::Point leftEye(
                 (shape.part(0).x() + shape.part(1).x()) * pow(2, scale_factor) / 2.0,
                 (shape.part(0).y() + shape.part(1).y()) * pow(2, scale_factor) / 2.0);
@@ -222,12 +221,6 @@ public:
     CaptureReadFailedException() : CaptureException("Failed to read a capture") {}
 };
 
-// class CaptureImageTransformationFailedException : public CaptureException
-// {
-// public:
-//     CaptureImageTransformationFailedException() : CaptureException("Image coord transformation failed") {}
-// };
-
 Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformation)
 {
     // Capture a depth frame
@@ -249,7 +242,7 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
         k4a_image_release(dDepthImage);
         k4a_capture_release(capture);
         std::cout << "Failed to create empty transformed_depth_image" << std::endl;
-        abort();
+        exit(0);
     }
     if (K4A_RESULT_FAILED == k4a_transformation_depth_image_to_color_camera(transformation, dDepthImage, cDepthImage))
     {
@@ -258,8 +251,7 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
         k4a_image_release(dDepthImage);
         k4a_capture_release(capture);
         std::cout << "Failed to create transformed_depth_image" << std::endl;
-        abort();
-        // throw CaptureImageTransformationFailedException();
+        exit(0);
     }
 }
 
