@@ -1,10 +1,8 @@
-#include "tracker.hpp"
-#include <k4a/k4a.h>
+#include <k4a/k4a.h> 
 #include <iostream>
 #include <exception>
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
-
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
@@ -16,6 +14,9 @@
 #include <dlib/gui_widgets.h>
 #include <dlib/image_io.h>
 #include <dlib/opencv.h>
+
+#include "tracker.hpp"
+#include "filesystem.hpp"
 
 class TrackerException : public std::exception
 {
@@ -102,7 +103,7 @@ Tracker::Tracker()
         transformation = k4a_transformation_create(&calibration);
 
         detector = dlib::get_frontal_face_detector();
-        dlib::deserialize("/home/robbieb/Imperial/IndividualProject/VolumetricSim/data/shape_predictor_5_face_landmarks.dat") >> predictor;
+        dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
     }
 }
 
@@ -166,13 +167,13 @@ glm::vec3 Tracker::readFrame()
             if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &k4a_point, depth, K4A_CALIBRATION_TYPE_COLOR, K4A_CALIBRATION_TYPE_COLOR, &camera_point, &valid))
             {
                 std::cout << "Failed to convert from 2d to 3d" << std::endl;
-                abort();
+                exit(EXIT_FAILURE);
             }
 
             if (!valid)
             {
                 std::cout << "Failed to convert to valid 3d coords" << std::endl;
-                abort();
+                exit(EXIT_FAILURE);
             }
             headPos = glm::vec3((-(float)camera_point.xyz.x) / 10.0, -((float)camera_point.xyz.y) / 10.0, ((float)camera_point.xyz.z) / 10.0);
         }
@@ -242,7 +243,7 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
         k4a_image_release(dDepthImage);
         k4a_capture_release(capture);
         std::cout << "Failed to create empty transformed_depth_image" << std::endl;
-        exit(0);
+        exit(EXIT_FAILURE);
     }
     if (K4A_RESULT_FAILED == k4a_transformation_depth_image_to_color_camera(transformation, dDepthImage, cDepthImage))
     {
@@ -251,7 +252,7 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
         k4a_image_release(dDepthImage);
         k4a_capture_release(capture);
         std::cout << "Failed to create transformed_depth_image" << std::endl;
-        exit(0);
+        exit(EXIT_FAILURE);
     }
 }
 
