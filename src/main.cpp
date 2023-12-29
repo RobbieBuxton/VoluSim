@@ -16,7 +16,7 @@
 
 #include "main.hpp"
 #include "display.hpp"
-#include "kinect.hpp"
+#include "tracker.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
 
@@ -33,7 +33,7 @@ int main()
 
     if (geteuid() != 0)
     {
-        std::cout << "ERROR: Application needs root to be able to use Kinect" << std::endl;
+        std::cout << "ERROR: Application needs root to be able to use Tracker" << std::endl;
         return 1;
     }
 
@@ -65,7 +65,7 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -144,9 +144,9 @@ int main()
     // Head distance 50cm
     glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
 
-    std::unique_ptr<Kinect> myKinect;
+    std::unique_ptr<Tracker> myTracker;
  
-    myKinect = std::make_unique<Kinect>();
+    myTracker = std::make_unique<Tracker>();
 
     // render loop
     // -----------
@@ -171,11 +171,16 @@ int main()
 
         // activate shader
         ourShader.use();
-
-        glm::vec3 kinect_pe = myKinect->readFrame();
-        if (kinect_pe != (glm::vec3(0,0,-1))) {
-            pe = kinect_pe;
+    
+        try
+        {
+            pe = myTracker->readFrame();
         }
+        catch(const std::exception& e)
+        {
+            std::cout << e.what() << '\n';
+        }
+        
         std::cout << glm::to_string(pe) << std::endl;
 
         ourShader.setMat4("projection", Display.projectionToEye(pe));
@@ -190,7 +195,6 @@ int main()
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-    myKinect->close();
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
@@ -242,7 +246,7 @@ void processInput(GLFWwindow *window, glm::vec3 &peChange)
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
