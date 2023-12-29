@@ -83,7 +83,7 @@ Kinect::Kinect()
         config.camera_fps = K4A_FRAMES_PER_SECOND_30;
         // BGRA is not native to kinect might be worth switching to MJPEG
         config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-        config.color_resolution = K4A_COLOR_RESOLUTION_2160P;
+        config.color_resolution = K4A_COLOR_RESOLUTION_720P;
         config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
         config.synchronized_images_only = true;
 
@@ -154,7 +154,7 @@ glm::vec3 Kinect::readFrame()
 
         cv::cuda::GpuMat bgrImageGpu(bgrImage);
 
-        int scale_factor = 2;
+        int scale_factor = 1;
         for (int i = 0; i < scale_factor; i++)
         {
             cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
@@ -181,10 +181,10 @@ glm::vec3 Kinect::readFrame()
                 (shape.part(2).y() + shape.part(3).y()) * pow(2,scale_factor) / 2.0);
 
             cv::circle(depth_display, leftEye, 10, cv::Scalar(0, 255, 0), -1);
-            cv::circle(depth_display, rightEye, 10, cv::Scalar(0, 255, 0), -1);
+            // cv::circle(depth_display, rightEye, 10, cv::Scalar(0, 255, 0), -1);
             cv::imshow("Color Image", depth_display);
 
-            ushort depth = depth_mat.at<ushort>(leftEye.x,leftEye.y);
+            ushort depth = depth_mat.at<ushort>(leftEye.y,leftEye.x);
             std::cout << "Depth:" << depth << " x: " << leftEye.x << " y " << leftEye.y << std::endl;
             k4a_float2_t k4a_point;
             k4a_point.xy.x = leftEye.x;
@@ -194,7 +194,7 @@ glm::vec3 Kinect::readFrame()
             k4a_calibration_2d_to_3d(&calibration,&k4a_point,depth,K4A_CALIBRATION_TYPE_COLOR,K4A_CALIBRATION_TYPE_COLOR,&camera_point,&valid);
             
             if (valid) {
-                headPos = glm::vec3(-((float)camera_point.xyz.x)/10.0, ((float)camera_point.xyz.y)/10.0, ((float)camera_point.xyz.z)/10.0);
+                headPos = glm::vec3((-(float)camera_point.xyz.x)/10.0, -((float)camera_point.xyz.y)/10.0, ((float)camera_point.xyz.z)/10.0);
             } else {
                 headPos = glm::vec3(0,0,-1);
             }
