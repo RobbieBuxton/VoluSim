@@ -5,6 +5,11 @@
 #include <cstdlib>
 #include <filesystem>
 
+#ifndef PACKAGE_PATH
+#define PACKAGE_PATH ""
+#endif
+
+
 class FileSystem
 {
 private:
@@ -20,29 +25,25 @@ public:
 private:
   static std::string const &getRoot()
   {
-    static std::string root = std::filesystem::current_path();
+    static std::string root = PACKAGE_PATH;
     return root;
   }
 
-  // static std::string(*foo (std::string const &)) getPathBuilder()
   static Builder getPathBuilder()
   {
     if (getRoot() != "")
       return &FileSystem::getPathRelativeRoot;
     else
-      return &FileSystem::getPathRelativeBinary;
+    {
+      std::cout << "ERROR: no package path was provided during compilation" << std::endl;
+      abort();
+    }
   }
 
   static std::string getPathRelativeRoot(const std::string &path)
   {
     return getRoot() + std::string("/") + path;
   }
-
-  static std::string getPathRelativeBinary(const std::string &path)
-  {
-    return "../../../" + path;
-  }
 };
 
-// FILESYSTEM_H
 #endif

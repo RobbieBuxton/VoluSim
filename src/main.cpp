@@ -20,6 +20,7 @@
 #include "filesystem.hpp"
 #include "shader.hpp"
 
+
 // timing
 GLfloat deltaTime = 0.0f; // time between current frame and last frame
 GLfloat lastFrame = 0.0f;
@@ -27,7 +28,6 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-    std::cout << cv::getBuildInformation() << std::endl;
     int num_devices = cv::cuda::getCudaEnabledDeviceCount();
     std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
 
