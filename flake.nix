@@ -99,6 +99,7 @@
           pkgs.glxinfo
 
           # Libs
+          pkgs.assimp
           dlib
           pkgs.libpng
           pkgs.libjpeg
@@ -138,6 +139,8 @@
             "src/main.cpp"
             "src/display.cpp"
             "src/tracker.cpp"
+            "src/object_loader.cpp"
+            "src/mesh.cpp"
             "${gladBuildDir}/src/gl.c"
           ];
           libs = [ 

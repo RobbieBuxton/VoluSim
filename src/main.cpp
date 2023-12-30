@@ -14,12 +14,13 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/cuda.hpp>
 
+
 #include "main.hpp"
 #include "display.hpp"
 #include "tracker.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
-
+#include "object_loader.hpp"
 
 // timing
 GLfloat deltaTime = 0.0f; // time between current frame and last frame
@@ -28,6 +29,9 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
+
+    loader();
+    abort();
     int num_devices = cv::cuda::getCudaEnabledDeviceCount();
     std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
 
