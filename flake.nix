@@ -132,7 +132,7 @@
         buildPhase = let
           gladBuildDir = "build/glad";
           flags = [
-            "-Ofast"
+            # "-Ofast"
             "-Wall"
           ];
           sources = [

@@ -1,7 +1,10 @@
 #ifndef OBJECT_LOADER_H
 #define OBJECT_LOADER_H
 
-int loader();
+#include <string>
+#include "mesh.hpp"
+
+Mesh loadObjFile(const std::string& path); 
 
 #endif
 

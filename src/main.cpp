@@ -29,9 +29,6 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-
-    loader();
-    abort();
     int num_devices = cv::cuda::getCudaEnabledDeviceCount();
     std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
 
@@ -91,6 +88,10 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+
+
+    Mesh myMesh = loadObjFile("data/resources/models/crate.obj");
+    std::cout << "Finished Load" << std::endl;
 
     // build and compile our shader zprogram
     // ------------------------------------
