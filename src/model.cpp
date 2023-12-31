@@ -9,10 +9,10 @@
 
 #include "tiny_obj_loader.h"
 #include "filesystem.hpp"
-#include "object_loader.hpp"
+#include "model.hpp"
 #include "mesh.hpp"
 
-Mesh loadObjFile(const std::string &path)
+void Model::loadObjFile(const std::string &path)
 {
 
     std::string inputfile = FileSystem::getPath(path).c_str();
@@ -38,13 +38,12 @@ Mesh loadObjFile(const std::string &path)
     std::cout << "Shape Number: " << shapes.size() << std::endl;
     std::cout << "Materials Number: " << materials.size() << std::endl;
 
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-    std::vector<Texture> textures;
-    std::map<Vertex, uint32_t> uniqueVertices;
-
     for (const auto &shape : shapes)
     {
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+        std::vector<Texture> textures;
+        std::map<Vertex, uint32_t> uniqueVertices;
         for (const auto &index : shape.mesh.indices)
         {
             Vertex newVertex;
@@ -53,14 +52,25 @@ Mesh loadObjFile(const std::string &path)
                 attributes.vertices[3 * index.vertex_index + 1],
                 attributes.vertices[3 * index.vertex_index + 2]);
 
-            newVertex.Normal = glm::vec3(
-                attributes.normals[index.normal_index * 3],
-                attributes.normals[index.normal_index * 3 + 1],
-                attributes.normals[index.normal_index * 3 + 2]);
+            if (index.normal_index >= 0)
+            {
+                newVertex.Normal = glm::vec3(
+                    attributes.normals[index.normal_index * 3],
+                    attributes.normals[index.normal_index * 3 + 1],
+                    attributes.normals[index.normal_index * 3 + 2]);
+            } else {
+                newVertex.Normal = glm::vec3(0,0,0); //This is placeholder
+            }
 
-            newVertex.TexCoords = glm::vec2(
-                attributes.texcoords[index.texcoord_index * 2],
-                attributes.texcoords[index.texcoord_index * 2 + 1]);
+            if (index.texcoord_index >= 0)
+            {
+                newVertex.TexCoords = glm::vec2(
+                    attributes.texcoords[index.texcoord_index * 2],
+                    attributes.texcoords[index.texcoord_index * 2 + 1]);
+            } else {
+                newVertex.TexCoords = glm::vec2(0,0); //This is placeholder
+            }
+
 
             if (uniqueVertices.count(newVertex) == 0)
             {
@@ -70,7 +80,16 @@ Mesh loadObjFile(const std::string &path)
 
             indices.push_back(uniqueVertices[newVertex]);
         }
+        std::cout << "Vertices Number: " << vertices.size() << " Indicies Number: " << indices.size() << std::endl;
+        meshes.push_back(std::make_shared<Mesh>(vertices, indices, textures));
     }
-    std::cout << "Vertices Number: " << vertices.size() << " Indicies Number: " << indices.size() << std::endl;
-    return Mesh{vertices, indices, textures};
 }
+
+void Model::Draw(Shader &shader)
+{   
+    // std::cout << meshes.size() << std::endl;
+    for(unsigned int i = 0; i < meshes.size(); i++)
+    {
+        meshes[i]->Draw(shader);
+    }
+} 

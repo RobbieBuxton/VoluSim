@@ -20,7 +20,7 @@
 #include "tracker.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
-#include "object_loader.hpp"
+#include "model.hpp"
 
 // timing
 GLfloat deltaTime = 0.0f; // time between current frame and last frame
@@ -89,57 +89,9 @@ int main()
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
-
-    Mesh myMesh = loadObjFile("data/resources/models/crate.obj");
-    std::cout << "Finished Load" << std::endl;
-
     // build and compile our shader zprogram
     // ------------------------------------
     Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes for walls
-    // ---------------------------------------------------------------------------
-    float wallsVertices[] = {
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        -0.5f, 0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f,
-        -0.5f, -0.5f, -1.0f,
-        0.5f, -0.5f, -1.0f,
-        -0.5f, 0.5f, -1.0f,
-        0.5f, 0.5f, -1.0f};
-
-    unsigned int wallIndices[] = {
-        // Back Wall
-        4, 5, 7,
-        4, 6, 7,
-        // Left wall
-        0, 4, 6,
-        0, 2, 6,
-        // Right wall
-        5, 1, 3,
-        5, 7, 3,
-        // Floor
-        4, 5, 1,
-        4, 0, 1};
-
-    // world space positions of our walls
-    unsigned int wallsVBO, wallsVAO, wallsEBO;
-    glGenVertexArrays(1, &wallsVAO);
-    glGenBuffers(1, &wallsVBO);
-    glGenBuffers(1, &wallsEBO);
-
-    glBindVertexArray(wallsVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, wallsVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(wallsVertices), wallsVertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wallsEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(wallIndices), wallIndices, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
 
     // Robbie's Screen
     // Width = 70.5cm
@@ -153,6 +105,9 @@ int main()
  
     myTracker = std::make_unique<Tracker>();
 
+    Model myModel("data/resources/models/cornell_box.obj");
+    std::cout << "Finished Load" << std::endl;
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -165,7 +120,6 @@ int main()
 
         // input
         // -----
-
         glm::vec3 peChange = glm::vec3(0.0f, 0.0f, 0.0f);
         processInput(window, peChange);
 
@@ -186,25 +140,21 @@ int main()
             std::cout << e.what() << '\n';
         }
         
-        std::cout << glm::to_string(pe) << std::endl;
+        // std::cout << glm::to_string(pe) << std::endl;
 
         ourShader.setMat4("projection", Display.projectionToEye(pe));
         ourShader.setMat4("view", glm::mat4(1.0f));
 
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(0.05, 0.05, -0.05));
+        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(1,1,1));
         ourShader.setMat4("model", model);
 
-        glBindVertexArray(wallsVAO);
-        glDrawElements(GL_TRIANGLES, sizeof(wallIndices), GL_UNSIGNED_INT, 0);
+        myModel.Draw(ourShader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &wallsVAO);
-    glDeleteBuffers(1, &wallsVBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------

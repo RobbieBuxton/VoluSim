@@ -139,7 +139,7 @@
             "src/main.cpp"
             "src/display.cpp"
             "src/tracker.cpp"
-            "src/object_loader.cpp"
+            "src/model.cpp"
             "src/mesh.cpp"
             "${gladBuildDir}/src/gl.c"
           ];

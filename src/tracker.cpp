@@ -146,7 +146,7 @@ glm::vec3 Tracker::readFrame()
         {
             cv::Mat flipped_depth_display;
             cv::flip(depth_display, flipped_depth_display, 1);
-            cv::imshow("Color Image", flipped_depth_display);
+            // cv::imshow("Color Image", flipped_depth_display);
             cv::waitKey(1);
             throw FailedToDetectFaceException();
         }
@@ -179,7 +179,7 @@ glm::vec3 Tracker::readFrame()
         }
         cv::Mat flipped_depth_display;
         cv::flip(depth_display, flipped_depth_display, 1);
-        cv::imshow("Color Image", flipped_depth_display);
+        // cv::imshow("Color Image", flipped_depth_display);
         cv::waitKey(1);
         return headPos;
     }

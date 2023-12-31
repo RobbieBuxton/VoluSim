@@ -10,6 +10,12 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
 }
 
 
+Mesh::~Mesh() {
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+}
+
 void Mesh::setupMesh()
 {
     glGenVertexArrays(1, &VAO);
@@ -57,8 +63,9 @@ void Mesh::Draw(Shader &shader) {
     // }
     // glActiveTexture(GL_TEXTURE0);
 
-    // // draw mesh
-    // glBindVertexArray(VAO);
-    // glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-    // glBindVertexArray(0);
+    // draw mesh
+
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
 }
