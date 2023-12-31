@@ -53,8 +53,11 @@ int main()
     // GLuint WIDTH = mode->width;
     // GLuint HEIGHT = mode->height;
 
-    GLuint WIDTH = 3840;
-    GLuint HEIGHT = 2160;
+    // GLuint WIDTH = 3840;
+    // GLuint HEIGHT = 2160;
+
+    GLuint WIDTH = 2000;
+    GLuint HEIGHT = 2000;
 
     // Create a GLFWwindow object that we can use for GLFW's functions
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -96,7 +99,7 @@ int main()
     // Robbie's Screen
     // Width = 70.5cm
     // Height = 39.5cm
-    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 10.0f, 0.1f, 500.0f);
+    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 50.0f, 0.1f, 500.0f);
 
     // Head distance 50cm
     glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
@@ -146,8 +149,9 @@ int main()
         ourShader.setMat4("view", glm::mat4(1.0f));
 
         // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(0.05, 0.05, -0.05));
-        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(1,1,1));
+        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(0.05, 0.05, -0.05));
+        glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width/2.0, Display.height/2.0, Display.depth/2.0)),glm::vec3(0, -1, -1));
+
         ourShader.setMat4("model", model);
 
         myModel.Draw(ourShader);
