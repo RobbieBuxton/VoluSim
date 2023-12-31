@@ -12,6 +12,10 @@
     pkgs = import nixpkgs { inherit system; config.cudaSupport = true; config.allowUnfree = true; };
     opencv = (pkgs.opencv.override { enableGtk2 = true; });
     dlib = (pkgs.dlib.override { guiSupport = true; });
+    tinyobjloaderSrc = builtins.fetchurl {
+      url  = "https://raw.githubusercontent.com/tinyobjloader/tinyobjloader/release/tiny_obj_loader.h";
+      sha256 = "sha256:1yhdm96zmpak0gma019xh9d0v1m99vm0akk5qy7v4gyaj0a50690";
+    }; 
     concatStringsWithSpace = pkgs.lib.strings.concatStringsSep " ";
   in
   {
@@ -57,6 +61,7 @@
             name = "Linux"; 
             includePath = [
               "include" 
+              ".vscode/include"
               ".vscode/glad/include"
               "${pkgs.glfw}/include"
               "${pkgs.glm}/include"
@@ -80,6 +85,7 @@
       export PS1="\e[0;31m[\u@\h \W]\$ \e[m "
       glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible --quiet
       jq --indent 4 -n '${builtins.toJSON vscodeCppConfig}' >> ${vscodeDir}/c_cpp_properties.json
+      mkdir -p ${vscodeDir}/include && cp ${tinyobjloaderSrc} ./${vscodeDir}/include/tiny_obj_loader.h
       trap "rm ${vscodeDir} -rf;" exit 
     '';
   };
@@ -99,6 +105,7 @@
           pkgs.glxinfo
 
           # Libs
+          pkgs.assimp
           dlib
           pkgs.libpng
           pkgs.libjpeg
@@ -122,6 +129,7 @@
             sha256 = "sha256:0wm4bbwnja7ik7r28pv00qrl3i1h6811zkgnjfvzv7jwpyz7ny3f";
           }; 
         in  ''
+          cp ${tinyobjloaderSrc} ./include/tiny_obj_loader.h
           cd data
           cp ${faceLandmarksSrc} ./shape_predictor_5_face_landmarks.dat.bz2
           bzip2 -d ./shape_predictor_5_face_landmarks.dat.bz2
@@ -131,13 +139,15 @@
         buildPhase = let
           gladBuildDir = "build/glad";
           flags = [
-            "-Ofast"
+            # "-Ofast"
             "-Wall"
           ];
           sources = [
             "src/main.cpp"
             "src/display.cpp"
             "src/tracker.cpp"
+            "src/model.cpp"
+            "src/mesh.cpp"
             "${gladBuildDir}/src/gl.c"
           ];
           libs = [ 

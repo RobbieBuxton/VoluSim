@@ -14,12 +14,13 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/cuda.hpp>
 
+
 #include "main.hpp"
 #include "display.hpp"
 #include "tracker.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
-
+#include "model.hpp"
 
 // timing
 GLfloat deltaTime = 0.0f; // time between current frame and last frame
@@ -52,8 +53,11 @@ int main()
     // GLuint WIDTH = mode->width;
     // GLuint HEIGHT = mode->height;
 
-    GLuint WIDTH = 3840;
-    GLuint HEIGHT = 2160;
+    // GLuint WIDTH = 3840;
+    // GLuint HEIGHT = 2160;
+
+    GLuint WIDTH = 2000;
+    GLuint HEIGHT = 2000;
 
     // Create a GLFWwindow object that we can use for GLFW's functions
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -92,54 +96,10 @@ int main()
     // ------------------------------------
     Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes for walls
-    // ---------------------------------------------------------------------------
-    float wallsVertices[] = {
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        -0.5f, 0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f,
-        -0.5f, -0.5f, -1.0f,
-        0.5f, -0.5f, -1.0f,
-        -0.5f, 0.5f, -1.0f,
-        0.5f, 0.5f, -1.0f};
-
-    unsigned int wallIndices[] = {
-        // Back Wall
-        4, 5, 7,
-        4, 6, 7,
-        // Left wall
-        0, 4, 6,
-        0, 2, 6,
-        // Right wall
-        5, 1, 3,
-        5, 7, 3,
-        // Floor
-        4, 5, 1,
-        4, 0, 1};
-
-    // world space positions of our walls
-    unsigned int wallsVBO, wallsVAO, wallsEBO;
-    glGenVertexArrays(1, &wallsVAO);
-    glGenBuffers(1, &wallsVBO);
-    glGenBuffers(1, &wallsEBO);
-
-    glBindVertexArray(wallsVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, wallsVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(wallsVertices), wallsVertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wallsEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(wallIndices), wallIndices, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
-
     // Robbie's Screen
     // Width = 70.5cm
     // Height = 39.5cm
-    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 10.0f, 0.1f, 500.0f);
+    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 50.0f, 0.1f, 500.0f);
 
     // Head distance 50cm
     glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
@@ -147,6 +107,9 @@ int main()
     std::unique_ptr<Tracker> myTracker;
  
     myTracker = std::make_unique<Tracker>();
+
+    Model myModel("data/resources/models/cornell_box.obj");
+    std::cout << "Finished Load" << std::endl;
 
     // render loop
     // -----------
@@ -160,7 +123,6 @@ int main()
 
         // input
         // -----
-
         glm::vec3 peChange = glm::vec3(0.0f, 0.0f, 0.0f);
         processInput(window, peChange);
 
@@ -181,25 +143,22 @@ int main()
             std::cout << e.what() << '\n';
         }
         
-        std::cout << glm::to_string(pe) << std::endl;
+        // std::cout << glm::to_string(pe) << std::endl;
 
         ourShader.setMat4("projection", Display.projectionToEye(pe));
         ourShader.setMat4("view", glm::mat4(1.0f));
 
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(0.05, 0.05, -0.05));
+        glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width/2.0, Display.height/2.0, Display.depth/2.0)),glm::vec3(0, -1, -1));
+
         ourShader.setMat4("model", model);
 
-        glBindVertexArray(wallsVAO);
-        glDrawElements(GL_TRIANGLES, sizeof(wallIndices), GL_UNSIGNED_INT, 0);
+        myModel.Draw(ourShader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &wallsVAO);
-    glDeleteBuffers(1, &wallsVBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
