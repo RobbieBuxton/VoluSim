@@ -11,7 +11,7 @@ class Tracker
 public:
     Tracker();
     ~Tracker();
-    glm::vec3 readFrame();
+    void updateEyePos();
     void close();
 
     k4a_device_t device;
@@ -20,22 +20,25 @@ public:
     k4a_transformation_t transformation;
     dlib::frontal_face_detector detector;
     dlib::shape_predictor predictor;
+    glm::vec3 eyePos;
+
 private:
-    class Capture {
-        public:
-            Capture(k4a_device_t device, k4a_transformation_t transformation);
-            ~Capture();
-            // c prefix means in colour coord space, d means in depth/ir coord space
-            k4a_image_t cColorImage;
-            k4a_image_t cDepthImage;
-            // k4a_image_t cIRImage;
-            // k4a_image_t dColorImage;
-            k4a_image_t dDepthImage;
-            // k4a_image_t dIRImage;
-        private:
-            k4a_capture_t capture = NULL;
-            int32_t timeout = 17;
-    };      
+    class Capture
+    {
+    public:
+        Capture(k4a_device_t device, k4a_transformation_t transformation);
+        ~Capture();
+        // c prefix means in colour coord space, d means in depth/ir coord space
+        k4a_image_t cColorImage;
+        k4a_image_t cDepthImage;
+        // k4a_image_t cIRImage;
+        // k4a_image_t dColorImage;
+        k4a_image_t dDepthImage;
+        // k4a_image_t dIRImage;
+    private:
+        k4a_capture_t capture = NULL;
+        int32_t timeout = 17;
+    };
 };
 
 #endif
