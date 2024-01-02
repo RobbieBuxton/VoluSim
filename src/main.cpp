@@ -30,6 +30,29 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
+
+#ifdef DLIB_USE_CUDA
+    std::cout << "Dlib is compiled with CUDA support." << std::endl;
+#else
+    std::cout << "Dlib is not compiled with CUDA support." << std::endl;
+#endif
+#ifdef __AVX__
+	std::cout << "AVX on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE2
+	std::cout << "DLIB_HAVE_SSE2 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE3
+	std::cout << "DLIB_HAVE_SSE3 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE41
+	std::cout << "DLIB_HAVE_SSE41 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_AVX
+	std::cout << "DLIB_HAVE_AVX on" << std::endl;
+#endif
+
+
     int num_devices = cv::cuda::getCudaEnabledDeviceCount();
     std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
 
@@ -101,8 +124,8 @@ GLFWwindow *initOpenGL()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    GLuint WIDTH = 2000;
-    GLuint HEIGHT = 2000;
+    GLuint WIDTH = 3840;
+    GLuint HEIGHT = 2160;
 
     // Create a GLFWwindow object that we can use for GLFW's functions
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -150,7 +173,7 @@ void pollTracker(Tracker *trackerPtr, GLFWwindow *window)
         }
         catch (const std::exception &e)
         {
-            std::cout << e.what() << '\n';
+            // std::cout << e.what() << '\n';
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

@@ -9,9 +9,35 @@
   outputs = { self, nixpkgs, k4a}: 
   let 
     system = "x86_64-linux";
-    pkgs = import nixpkgs { inherit system; config.cudaSupport = true; config.allowUnfree = true; };
+    pkgs = import nixpkgs { 
+      inherit system; 
+      overlays = [ dlibOverlay ];
+      config.cudaSupport = true; 
+      config.allowUnfree = true; 
+    };
+
+    #This fixes the dlib package (I think i'll put a pr into nixpkgs)
+    dlibOverlay = self: super: {
+      dlib = let
+        cudaEnabled = true;  # Set this based on your needs
+        cudaDeps = if cudaEnabled then [ super.cudaPackages.cudatoolkit super.cudaPackages.cudnn] else [ ];
+      in super.dlib.overrideAttrs (oldAttrs: {
+        buildInputs = oldAttrs.buildInputs ++ cudaDeps;
+
+        # Use CUDA stdenv if CUDA is enabled
+        stdenv = if cudaEnabled then super.cudaPackages.backendStdenv else oldAttrs.stdenv;
+      });
+    };
+
     opencv = (pkgs.opencv.override { enableGtk2 = true; });
-    dlib = (pkgs.dlib.override { guiSupport = true; });
+
+    dlib = (pkgs.dlib.override { 
+      guiSupport = true; 
+      cudaSupport = true;
+      avxSupport = true; 
+      sse4Support = true;
+    });
+
     tinyobjloaderSrc = builtins.fetchurl {
       url  = "https://raw.githubusercontent.com/tinyobjloader/tinyobjloader/release/tiny_obj_loader.h";
       sha256 = "sha256:1yhdm96zmpak0gma019xh9d0v1m99vm0akk5qy7v4gyaj0a50690";
@@ -139,8 +165,9 @@
         buildPhase = let
           gladBuildDir = "build/glad";
           flags = [
-            # "-Ofast"
+            "-Ofast"
             "-Wall"
+            "-march=skylake" #This is platform specific need to find a way to optimise this
           ];
           sources = [
             "src/main.cpp"
