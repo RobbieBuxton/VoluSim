@@ -104,15 +104,18 @@ Tracker::Tracker()
 
         detector = dlib::get_frontal_face_detector();
         dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
+   
+        // Head distance 50cm
+        eyePos = glm::vec3(0.0f, 0.0f, 50.0f);
+
     }
 }
 
-glm::vec3 Tracker::readFrame()
+void Tracker::updateEyePos()
 {
     try
     {
         Tracker::Capture capture(device, transformation);
-        glm::vec3 headPos;
         int depth_width = k4a_image_get_width_pixels(capture.cDepthImage);
         int depth_height = k4a_image_get_height_pixels(capture.cDepthImage);
         cv::Mat depth_mat(depth_height, depth_width, CV_16U, k4a_image_get_buffer(capture.cDepthImage), (size_t)k4a_image_get_stride_bytes(capture.cDepthImage));
@@ -175,13 +178,12 @@ glm::vec3 Tracker::readFrame()
                 std::cout << "Failed to convert to valid 3d coords" << std::endl;
                 exit(EXIT_FAILURE);
             }
-            headPos = glm::vec3((-(float)camera_point.xyz.x) / 10.0, -((float)camera_point.xyz.y) / 10.0, ((float)camera_point.xyz.z) / 10.0);
+            eyePos = glm::vec3((-(float)camera_point.xyz.x) / 10.0, -((float)camera_point.xyz.y) / 10.0, ((float)camera_point.xyz.z) / 10.0);
         }
         cv::Mat flipped_depth_display;
         cv::flip(depth_display, flipped_depth_display, 1);
         // cv::imshow("Color Image", flipped_depth_display);
         cv::waitKey(1);
-        return headPos;
     }
     catch (const std::exception& e)
     {

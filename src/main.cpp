@@ -9,11 +9,12 @@
 #include <iostream>
 #include <unistd.h>
 #include <exception>
+#include <thread>
+#include <chrono>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/cuda.hpp>
-
 
 #include "main.hpp"
 #include "display.hpp"
@@ -35,9 +36,62 @@ int main()
     if (geteuid() != 0)
     {
         std::cout << "ERROR: Application needs root to be able to use Tracker" << std::endl;
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
+    GLFWwindow *window = initOpenGL();
+
+    // build and compile our shader zprogram
+    // ------------------------------------
+    Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
+
+    // Robbie's Screen
+    // Width = 70.5cm, Height = 39.5cm
+    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 39.5f, 0.1f, 500.0f);
+
+    std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>();
+
+    Model myModel("data/resources/models/cornell_box.obj");
+    std::cout << "Finished Load" << std::endl;
+
+    std::thread trackerThread(pollTracker, trackerPtr.get(), window);
+
+    // render loop
+    // -----------
+    while (!glfwWindowShouldClose(window))
+    {
+        processInput(window);
+
+        // render
+        // ------
+        glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // activate shader
+        ourShader.use();
+
+        ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->eyePos));
+        ourShader.setMat4("view", glm::mat4(1.0f));
+
+        glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width / 2.0, Display.height / 2.0, Display.depth / 2.0)), glm::vec3(0, -1, -1));
+
+        ourShader.setMat4("model", model);
+
+        myModel.Draw(ourShader);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+    trackerThread.join();
+
+    // glfw: terminate, clearing all previously allocated GLFW resources.
+    // ------------------------------------------------------------------
+    glfwTerminate();
+    return 0;
+}
+
+GLFWwindow *initOpenGL()
+{
     std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
     // Init GLFW
     glfwInit();
@@ -46,15 +100,6 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-
-    // Get monitor infomation
-    // GLFWmonitor* MyMonitor =  glfwGetPrimaryMonitor(); // The primary monitor..
-    // const GLFWvidmode* mode = glfwGetVideoMode(MyMonitor);
-    // GLuint WIDTH = mode->width;
-    // GLuint HEIGHT = mode->height;
-
-    // GLuint WIDTH = 3840;
-    // GLuint HEIGHT = 2160;
 
     GLuint WIDTH = 2000;
     GLuint HEIGHT = 2000;
@@ -66,7 +111,7 @@ int main()
     {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
-        return -1;
+        exit(EXIT_FAILURE);
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -79,7 +124,7 @@ int main()
     if (version == 0)
     {
         std::cout << "Failed to initialize OpenGL context" << std::endl;
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     // Successfully loaded OpenGL
@@ -92,115 +137,29 @@ int main()
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
-    // build and compile our shader zprogram
-    // ------------------------------------
-    Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
+    return window;
+}
 
-    // Robbie's Screen
-    // Width = 70.5cm
-    // Height = 39.5cm
-    Display Display(glm::vec3(0.0f, 0.f, 0.f), 70.5f, 39.5f, 50.0f, 0.1f, 500.0f);
-
-    // Head distance 50cm
-    glm::vec3 pe = glm::vec3(0.0f, 0.0f, 50.0f);
-
-    std::unique_ptr<Tracker> myTracker;
- 
-    myTracker = std::make_unique<Tracker>();
-
-    Model myModel("data/resources/models/cornell_box.obj");
-    std::cout << "Finished Load" << std::endl;
-
-    // render loop
-    // -----------
+void pollTracker(Tracker *trackerPtr, GLFWwindow *window)
+{
     while (!glfwWindowShouldClose(window))
     {
-        // per-frame time logic
-        // --------------------
-        float currentFrame = static_cast<float>(glfwGetTime());
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-
-        // input
-        // -----
-        glm::vec3 peChange = glm::vec3(0.0f, 0.0f, 0.0f);
-        processInput(window, peChange);
-
-        // render
-        // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // activate shader
-        ourShader.use();
-    
         try
         {
-            pe = myTracker->readFrame();
+            trackerPtr->updateEyePos();
         }
-        catch(const std::exception& e)
+        catch (const std::exception &e)
         {
             std::cout << e.what() << '\n';
         }
-        
-        // std::cout << glm::to_string(pe) << std::endl;
-
-        ourShader.setMat4("projection", Display.projectionToEye(pe));
-        ourShader.setMat4("view", glm::mat4(1.0f));
-
-        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
-        // glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(0.05, 0.05, -0.05));
-        glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width/2.0, Display.height/2.0, Display.depth/2.0)),glm::vec3(0, -1, -1));
-
-        ourShader.setMat4("model", model);
-
-        myModel.Draw(ourShader);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
-    glfwTerminate();
-    return 0;
 }
 
-void processInput(GLFWwindow *window, glm::vec3 &peChange)
+void processInput(GLFWwindow *window)
 {
-    GLfloat tickChange = 0.5f;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-    {
-        // std::cout << "W" << std::endl;
-        peChange.y = tickChange;
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-    {
-        // std::cout << "S" << std::endl;
-        peChange.y = -tickChange;
-    }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-    {
-        // std::cout << "A" << std::endl;
-        peChange.x = -tickChange;
-    }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    {
-        // std::cout << "D" << std::endl;
-        peChange.x = tickChange;
-    }
-    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-    {
-        // std::cout << "Z" << std::endl;
-        peChange.z = tickChange;
-    }
-    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
-    {
-        // std::cout << "X" << std::endl;
-        peChange.z = -tickChange;
-    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
