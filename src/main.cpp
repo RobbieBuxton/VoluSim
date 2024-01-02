@@ -30,28 +30,34 @@ GLfloat lastFrame = 0.0f;
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-
 #ifdef DLIB_USE_CUDA
     std::cout << "Dlib is compiled with CUDA support." << std::endl;
-#else
-    std::cout << "Dlib is not compiled with CUDA support." << std::endl;
 #endif
-#ifdef __AVX__
-	std::cout << "AVX on" << std::endl;
+#ifdef DLIB_USE_FFTW
+    std::cout << "Dlib is compiled with FFTW support." << std::endl;
 #endif
-#ifdef DLIB_HAVE_SSE2
-	std::cout << "DLIB_HAVE_SSE2 on" << std::endl;
+#ifdef DLIB_USE_BLAS
+    std::cout << "Dlib is compiled with BLAS support." << std::endl;
 #endif
-#ifdef DLIB_HAVE_SSE3
-	std::cout << "DLIB_HAVE_SSE3 on" << std::endl;
-#endif
-#ifdef DLIB_HAVE_SSE41
-	std::cout << "DLIB_HAVE_SSE41 on" << std::endl;
-#endif
-#ifdef DLIB_HAVE_AVX
-	std::cout << "DLIB_HAVE_AVX on" << std::endl;
+#ifdef DLIB_USE_LAPACK
+    std::cout << "Dlib is compiled with LAPACK support." << std::endl;
 #endif
 
+#ifdef __AVX__
+    std::cout << "AVX on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE2
+    std::cout << "DLIB_HAVE_SSE2 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE3
+    std::cout << "DLIB_HAVE_SSE3 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE41
+    std::cout << "DLIB_HAVE_SSE41 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_AVX
+    std::cout << "DLIB_HAVE_AVX on" << std::endl;
+#endif
 
     int num_devices = cv::cuda::getCudaEnabledDeviceCount();
     std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;

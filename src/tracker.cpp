@@ -1,4 +1,4 @@
-#include <k4a/k4a.h> 
+#include <k4a/k4a.h>
 #include <iostream>
 #include <exception>
 #include <glm/glm.hpp>
@@ -14,6 +14,8 @@
 #include <dlib/gui_widgets.h>
 #include <dlib/image_io.h>
 #include <dlib/opencv.h>
+#include <dlib/dnn.h>
+
 #include <chrono>
 
 #include "tracker.hpp"
@@ -89,7 +91,7 @@ Tracker::Tracker()
         config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
         config.camera_fps = K4A_FRAMES_PER_SECOND_30;
         config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-        config.color_resolution = K4A_COLOR_RESOLUTION_2160P;
+        config.color_resolution = K4A_COLOR_RESOLUTION_1080P;
         config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
         config.synchronized_images_only = true;
 
@@ -105,22 +107,20 @@ Tracker::Tracker()
 
         detector = dlib::get_frontal_face_detector();
         dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
-   
+        dlib::deserialize(FileSystem::getPath("data/mmod_human_face_detector.dat").c_str()) >> cnn_face_detector;
+
         // Head distance 50cm
         eyePos = glm::vec3(0.0f, 0.0f, 50.0f);
-
     }
 }
 
 void Tracker::updateEyePos()
 {
-  
-
     try
     {
-        using std::chrono::high_resolution_clock;
-        using std::chrono::duration_cast;
         using std::chrono::duration;
+        using std::chrono::duration_cast;
+        using std::chrono::high_resolution_clock;
         using std::chrono::milliseconds;
         auto tStart = high_resolution_clock::now();
         Tracker::Capture capture(device, transformation);
@@ -144,7 +144,7 @@ void Tracker::updateEyePos()
 
         cv::cuda::GpuMat bgrImageGpu(bgrImage);
 
-        int scale_factor = 0;
+        int scale_factor = 1;
         for (int i = 0; i < scale_factor; i++)
         {
             cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
@@ -154,9 +154,19 @@ void Tracker::updateEyePos()
         auto tOpenCVProcessing = high_resolution_clock::now();
 
         dlib::cv_image<dlib::bgr_pixel> dlib_img = dlib::cv_image<dlib::bgr_pixel>(processedBgrImage);
-        auto dets = detector(dlib_img);
+
+        std::vector<dlib::matrix<dlib::rgb_pixel>> batch;
+        dlib::matrix<dlib::rgb_pixel> dlib_matrix;
+        dlib::assign_image(dlib_matrix, dlib_img);
+        batch.push_back(dlib_matrix);
+
+        auto detections = cnn_face_detector(batch);
         auto tFace = high_resolution_clock::now();
-        if (dets.size() == 0)
+
+        //Get first from batch
+        std::vector<dlib::mmod_rect> dets = detections[0];
+
+        if (dets.empty())
         {
             cv::Mat flipped_depth_display;
             cv::flip(depth_display, flipped_depth_display, 1);
@@ -167,7 +177,8 @@ void Tracker::updateEyePos()
 
         for (unsigned long j = 0; j < dets.size(); ++j)
         {
-            dlib::full_object_detection shape = predictor(dlib_img, dets[j]);
+            dlib::rectangle rect = dets[j].rect;
+            dlib::full_object_detection shape = predictor(dlib_img, rect);
             auto tLandmarks = high_resolution_clock::now();
             // This is slightly inaccurate because down down pyramid has size Size((src.cols+1)/2, (src.rows+1)/2)
             cv::Point leftEye(
@@ -176,7 +187,7 @@ void Tracker::updateEyePos()
             cv::circle(depth_display, leftEye, 10, cv::Scalar(0, 255, 0), -1);
 
             ushort depth = depth_mat.at<ushort>(leftEye.y, leftEye.x);
-            k4a_float2_t k4a_point = {leftEye.x, leftEye.y};
+            k4a_float2_t k4a_point = {static_cast<float>(leftEye.x), static_cast<float>(leftEye.y)};
             k4a_float3_t camera_point;
             int valid;
             if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &k4a_point, depth, K4A_CALIBRATION_TYPE_COLOR, K4A_CALIBRATION_TYPE_COLOR, &camera_point, &valid))
@@ -191,7 +202,7 @@ void Tracker::updateEyePos()
                 exit(EXIT_FAILURE);
             }
             eyePos = glm::vec3((-(float)camera_point.xyz.x) / 10.0, -((float)camera_point.xyz.y) / 10.0, ((float)camera_point.xyz.z) / 10.0);
-        
+
             auto tEnd = high_resolution_clock::now();
             /* Getting number of milliseconds as a double. */
             duration<double, std::milli> ms_double = tStart - tEnd;
@@ -205,15 +216,13 @@ void Tracker::updateEyePos()
             std::cout << "Dlib f:  " << -ms_face.count() << "ms" << std::endl;
             std::cout << "Dlib l:  " << -ms_landmarks.count() << "ms" << std::endl;
             std::cout << "----" << std::endl;
-
         }
         cv::Mat flipped_depth_display;
         cv::flip(depth_display, flipped_depth_display, 1);
         // cv::imshow("Color Image", flipped_depth_display);
         cv::waitKey(1);
-    
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         throw;
     }

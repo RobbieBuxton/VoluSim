@@ -18,14 +18,20 @@
 
     #This fixes the dlib package (I think i'll put a pr into nixpkgs)
     dlibOverlay = self: super: {
+      blas = super.blas.override {
+        blasProvider = self.mkl;
+      };
+
+      lapack = super.lapack.override {
+        lapackProvider = self.mkl;
+      };
       dlib = let
-        cudaEnabled = true;  # Set this based on your needs
-        cudaDeps = if cudaEnabled then [ super.cudaPackages.cudatoolkit super.cudaPackages.cudnn] else [ ];
+        cudaDeps = if super.config.cudaSupport then [ super.cudaPackages.cudatoolkit super.cudaPackages.cudnn self.fftw self.blas] else [ ];
       in super.dlib.overrideAttrs (oldAttrs: {
         buildInputs = oldAttrs.buildInputs ++ cudaDeps;
 
         # Use CUDA stdenv if CUDA is enabled
-        stdenv = if cudaEnabled then super.cudaPackages.backendStdenv else oldAttrs.stdenv;
+        stdenv = if super.config.cudaSupport then super.cudaPackages.backendStdenv else oldAttrs.stdenv;
       });
     };
 
@@ -66,8 +72,9 @@
       # Libs
       dlib
       opencv
-      pkgs.cudatoolkit # Both as sus
-      pkgs.linuxPackages.nvidia_x11 # Both as sus
+      pkgs.cudatoolkit
+      pkgs.cudaPackages.cudnn
+      pkgs.linuxPackages.nvidia_x11 
       pkgs.glfw
       pkgs.glm
       pkgs.stb
@@ -117,7 +124,7 @@
   };
 
     packages.${system} = {
-      default = pkgs.stdenv.mkDerivation {
+      default = pkgs.cudaPackages.backendStdenv.mkDerivation {
         pname = "volumetricSim";
         version = "0.0.1";
 
@@ -136,8 +143,9 @@
           pkgs.libpng
           pkgs.libjpeg
           opencv
-          pkgs.cudatoolkit # Both as sus
-          pkgs.linuxPackages.nvidia_x11 # Both as sus
+          pkgs.cudatoolkit 
+          pkgs.cudaPackages.cudnn
+          pkgs.linuxPackages.nvidia_x11
           k4a.packages.${system}.libk4a-dev
           k4a.packages.${system}.k4a-tools
           pkgs.glfw
@@ -147,6 +155,7 @@
           pkgs.xorg.libXrandr
           pkgs.xorg.libXi
           pkgs.udev
+          pkgs.mkl
         ];
 
         configurePhase = let
@@ -201,6 +210,12 @@
             "-ldlib"
             "-lcudart"
             "-lcuda" 
+            "-lcudnn"
+            "-lcublas"
+            "-lcurand"
+            "-lcusolver"
+            "-lmkl_intel_lp64"
+
           ];
           headers = [
             "-I ${dlib}/include"
