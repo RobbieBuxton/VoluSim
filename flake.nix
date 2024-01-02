@@ -163,11 +163,17 @@
             url  = "http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2";
             sha256 = "sha256:0wm4bbwnja7ik7r28pv00qrl3i1h6811zkgnjfvzv7jwpyz7ny3f";
           }; 
+          mmodHumanFaceDetectorSrc = builtins.fetchurl {
+            url = "http://dlib.net/files/mmod_human_face_detector.dat.bz2"; 
+            sha256 = "sha256:15g6nm3zpay80a2qch9y81h55z972bk465m7dh1j45mcjx4cm3hw";
+          };
         in  ''
           cp ${tinyobjloaderSrc} ./include/tiny_obj_loader.h
           cd data
           cp ${faceLandmarksSrc} ./shape_predictor_5_face_landmarks.dat.bz2
           bzip2 -d ./shape_predictor_5_face_landmarks.dat.bz2
+          cp ${mmodHumanFaceDetectorSrc} ./mmod_human_face_detector.dat.bz2
+          bzip2 -d ./mmod_human_face_detector.dat.bz2       
           cd ..
         '';
 
@@ -215,7 +221,6 @@
             "-lcurand"
             "-lcusolver"
             "-lmkl_intel_lp64"
-
           ];
           headers = [
             "-I ${dlib}/include"

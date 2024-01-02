@@ -105,7 +105,6 @@ Tracker::Tracker()
         k4a_device_get_calibration(device, config.depth_mode, config.color_resolution, &calibration);
         transformation = k4a_transformation_create(&calibration);
 
-        detector = dlib::get_frontal_face_detector();
         dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
         dlib::deserialize(FileSystem::getPath("data/mmod_human_face_detector.dat").c_str()) >> cnn_face_detector;
 
@@ -163,7 +162,7 @@ void Tracker::updateEyePos()
         auto detections = cnn_face_detector(batch);
         auto tFace = high_resolution_clock::now();
 
-        //Get first from batch
+        // Get first from batch (I think need to double check this)
         std::vector<dlib::mmod_rect> dets = detections[0];
 
         if (dets.empty())

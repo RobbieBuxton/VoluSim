@@ -31,7 +31,6 @@ public:
     k4a_device_configuration_t config;
     k4a_calibration_t calibration;
     k4a_transformation_t transformation;
-    dlib::frontal_face_detector detector;
     net_type cnn_face_detector;
     dlib::shape_predictor predictor;
     glm::vec3 eyePos;
