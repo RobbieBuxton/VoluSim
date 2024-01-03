@@ -9,9 +9,41 @@
   outputs = { self, nixpkgs, k4a}: 
   let 
     system = "x86_64-linux";
-    pkgs = import nixpkgs { inherit system; config.cudaSupport = true; config.allowUnfree = true; };
+    pkgs = import nixpkgs { 
+      inherit system; 
+      overlays = [ dlibOverlay ];
+      config.cudaSupport = true; 
+      config.allowUnfree = true; 
+    };
+
+    #This fixes the dlib package (I think i'll put a pr into nixpkgs)
+    dlibOverlay = self: super: {
+      blas = super.blas.override {
+        blasProvider = self.mkl;
+      };
+
+      lapack = super.lapack.override {
+        lapackProvider = self.mkl;
+      };
+      dlib = let
+        cudaDeps = if super.config.cudaSupport then [ super.cudaPackages.cudatoolkit super.cudaPackages.cudnn self.fftw self.blas] else [ ];
+      in super.dlib.overrideAttrs (oldAttrs: {
+        buildInputs = oldAttrs.buildInputs ++ cudaDeps;
+
+        # Use CUDA stdenv if CUDA is enabled
+        stdenv = if super.config.cudaSupport then super.cudaPackages.backendStdenv else oldAttrs.stdenv;
+      });
+    };
+
     opencv = (pkgs.opencv.override { enableGtk2 = true; });
-    dlib = (pkgs.dlib.override { guiSupport = true; });
+
+    dlib = (pkgs.dlib.override { 
+      guiSupport = true; 
+      cudaSupport = true;
+      avxSupport = true; 
+      sse4Support = true;
+    });
+
     tinyobjloaderSrc = builtins.fetchurl {
       url  = "https://raw.githubusercontent.com/tinyobjloader/tinyobjloader/release/tiny_obj_loader.h";
       sha256 = "sha256:1yhdm96zmpak0gma019xh9d0v1m99vm0akk5qy7v4gyaj0a50690";
@@ -40,8 +72,9 @@
       # Libs
       dlib
       opencv
-      pkgs.cudatoolkit # Both as sus
-      pkgs.linuxPackages.nvidia_x11 # Both as sus
+      pkgs.cudatoolkit
+      pkgs.cudaPackages.cudnn
+      pkgs.linuxPackages.nvidia_x11 
       pkgs.glfw
       pkgs.glm
       pkgs.stb
@@ -91,7 +124,7 @@
   };
 
     packages.${system} = {
-      default = pkgs.stdenv.mkDerivation {
+      default = pkgs.cudaPackages.backendStdenv.mkDerivation {
         pname = "volumetricSim";
         version = "0.0.1";
 
@@ -110,8 +143,9 @@
           pkgs.libpng
           pkgs.libjpeg
           opencv
-          pkgs.cudatoolkit # Both as sus
-          pkgs.linuxPackages.nvidia_x11 # Both as sus
+          pkgs.cudatoolkit 
+          pkgs.cudaPackages.cudnn
+          pkgs.linuxPackages.nvidia_x11
           k4a.packages.${system}.libk4a-dev
           k4a.packages.${system}.k4a-tools
           pkgs.glfw
@@ -121,6 +155,7 @@
           pkgs.xorg.libXrandr
           pkgs.xorg.libXi
           pkgs.udev
+          pkgs.mkl
         ];
 
         configurePhase = let
@@ -128,19 +163,26 @@
             url  = "http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2";
             sha256 = "sha256:0wm4bbwnja7ik7r28pv00qrl3i1h6811zkgnjfvzv7jwpyz7ny3f";
           }; 
+          mmodHumanFaceDetectorSrc = builtins.fetchurl {
+            url = "http://dlib.net/files/mmod_human_face_detector.dat.bz2"; 
+            sha256 = "sha256:15g6nm3zpay80a2qch9y81h55z972bk465m7dh1j45mcjx4cm3hw";
+          };
         in  ''
           cp ${tinyobjloaderSrc} ./include/tiny_obj_loader.h
           cd data
           cp ${faceLandmarksSrc} ./shape_predictor_5_face_landmarks.dat.bz2
           bzip2 -d ./shape_predictor_5_face_landmarks.dat.bz2
+          cp ${mmodHumanFaceDetectorSrc} ./mmod_human_face_detector.dat.bz2
+          bzip2 -d ./mmod_human_face_detector.dat.bz2       
           cd ..
         '';
 
         buildPhase = let
           gladBuildDir = "build/glad";
           flags = [
-            # "-Ofast"
+            "-Ofast"
             "-Wall"
+            "-march=skylake" #This is platform specific need to find a way to optimise this
           ];
           sources = [
             "src/main.cpp"
@@ -174,6 +216,11 @@
             "-ldlib"
             "-lcudart"
             "-lcuda" 
+            "-lcudnn"
+            "-lcublas"
+            "-lcurand"
+            "-lcusolver"
+            "-lmkl_intel_lp64"
           ];
           headers = [
             "-I ${dlib}/include"
