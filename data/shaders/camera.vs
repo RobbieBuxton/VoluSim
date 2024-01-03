@@ -5,8 +5,8 @@ layout (location = 2) in vec2 TexCoords;
 
 out vec4 colourAPos;
 
-uniform mat4 model;
 uniform mat4 projection;
+uniform mat4 model;
 
 void main()
 {
