@@ -1,5 +1,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -85,8 +87,38 @@ int main()
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>();
 
-    Model myModel("data/resources/models/cornell_box.obj");
+    Model myModel("data/resources/models/crate.obj");
     std::cout << "Finished Load" << std::endl;
+
+
+    // load and create a texture 
+    // -------------------------
+    unsigned int texture1;
+    // texture 1
+    // ---------
+    glGenTextures(1, &texture1);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load image, create texture and generate mipmaps
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+    unsigned char *data = stbi_load(FileSystem::getPath("data/resources/textures/crate.png").c_str(), &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+
 
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 
@@ -102,6 +134,10 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // bind textures on corresponding texture units
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+
         // activate shader
         ourShader.use();
 
@@ -109,7 +145,8 @@ int main()
 
         ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->eyePos + cameraOffset));
 
-        glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width / 2.0, Display.height / 2.0, Display.depth / 2.0)), glm::vec3(0, 0, -1));
+        glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width / 2.0, Display.height / 2.0, Display.depth / 2.0)), glm::vec3(0, 1, -2));
+        // glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width / 2.0, Display.height / 2.0, Display.depth / 2.0)), glm::vec3(0, 0, -1));
 
         ourShader.setMat4("model", model);
 
