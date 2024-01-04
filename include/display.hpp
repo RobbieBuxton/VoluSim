@@ -7,7 +7,7 @@
 class Display
 {
 public:
-    Display(glm::vec3 origin, GLfloat width, GLfloat height, GLfloat depth, GLfloat nearClip, GLfloat farClip);
+    Display(glm::vec3 origin, GLfloat width, GLfloat height, GLfloat depth, GLfloat n, GLfloat f);
     glm::mat4 projectionToEye(glm::vec3 eye);
 
     const GLfloat width;
@@ -25,7 +25,7 @@ private:
     glm::vec3 vu;
     glm::vec3 vn;
 
-    const GLfloat nearClip;
-    const GLfloat farClip;
+    const GLfloat n;
+    const GLfloat f;
 };
 #endif

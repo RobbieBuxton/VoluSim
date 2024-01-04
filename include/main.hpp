@@ -7,7 +7,7 @@
 #include "tracker.hpp"
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-GLFWwindow *initOpenGL();
+GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight);
 void processInput(GLFWwindow *window);
 void pollTracker(Tracker *tracker, GLFWwindow *window);
 #endif
