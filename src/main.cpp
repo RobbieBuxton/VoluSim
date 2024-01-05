@@ -1,7 +1,5 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -68,9 +66,9 @@ int main()
 
     GLuint maxPixelWidth = 3840;
     GLuint maxPixelHeight = 2160;
-    GLuint pixelWidth = 2160;
+    GLuint pixelWidth = 3840;
     GLuint pixelHeight = 2160;
-    GLFWwindow *window = initOpenGL(pixelWidth,pixelHeight);
+    GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
 
     // build and compile our shader zprogram
     // ------------------------------------
@@ -78,51 +76,23 @@ int main()
 
     // Robbie's Screen
     // Depth is artifical the others are real
-    GLfloat dWidth =  70.5f;
+    GLfloat dWidth = 70.5f;
     GLfloat dHeight = 39.5f;
     GLfloat dDepth = 39.5f;
-    GLfloat pixelScaledWidth = dWidth * ((GLfloat) pixelWidth /(GLfloat) maxPixelWidth);
-    GLfloat pixelScaledHeight = dWidth * ((GLfloat) pixelHeight /(GLfloat) maxPixelHeight);
-    Display Display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, pixelScaledHeight, 0.01f,1000.0f);
+    GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
+    GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
+    Display Display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, pixelScaledHeight, 0.01f, 1000.0f);
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>();
 
-    Model myModel("data/resources/models/crate.obj");
+    Model room("data/resources/models/room.obj");
+    Model crate1("data/resources/models/crate.obj");
+    Model crate2("data/resources/models/crate.obj");
     std::cout << "Finished Load" << std::endl;
-
-
-    // load and create a texture 
-    // -------------------------
-    unsigned int texture1;
-    // texture 1
-    // ---------
-    glGenTextures(1, &texture1);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    unsigned char *data = stbi_load(FileSystem::getPath("data/resources/textures/crate.png").c_str(), &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
-
 
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 
-    glm::vec3 cameraOffset = glm::vec3(0.0f,6.0f,-6.0f);
+    glm::vec3 cameraOffset = glm::vec3(0.0f, 6.0f, -6.0f);
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -134,10 +104,7 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // bind textures on corresponding texture units
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-
+        glm::mat4 model, scaleMatrix, translationMatrix;
         // activate shader
         ourShader.use();
 
@@ -145,12 +112,33 @@ int main()
 
         ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->eyePos + cameraOffset));
 
-        glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width / 2.0, Display.height / 2.0, Display.depth / 2.0)), glm::vec3(0, 1, -2));
-        // glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(Display.width / 2.0, Display.height / 2.0, Display.depth / 2.0)), glm::vec3(0, 0, -1));
+        ourShader.setVec3("viewPos", trackerPtr->eyePos + cameraOffset);
+        ourShader.setVec3("lightPos", glm::vec3(0.0f, Display.height / 2, 40.0f));
+        ourShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
+        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, Display.height / 2.0, -Display.depth / 2.0));
+        model = translationMatrix * scaleMatrix;
         ourShader.setMat4("model", model);
+        ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
 
-        myModel.Draw(ourShader);
+        room.Draw(ourShader);
+
+        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(10, 10, 10));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.25f * Display.width, Display.height / 2.0, -Display.depth / 4.0));
+        model = translationMatrix * scaleMatrix;
+        ourShader.setMat4("model", model);
+        ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
+
+        crate1.Draw(ourShader);
+
+        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(10, 10, 10));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-0.25f * Display.width, Display.height / 2.0, -3 * Display.depth / 4.0));
+        model = translationMatrix * scaleMatrix;
+        ourShader.setMat4("model", model);
+        ourShader.setVec3("objectColor", glm::vec3(0.0f, 0.5f, 0.5f));
+
+        crate2.Draw(ourShader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

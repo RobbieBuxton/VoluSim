@@ -9,9 +9,14 @@
 class Model 
 {
     public:
-        Model(char *path)
+        Model(char *objPath)
         {
-            loadObjFile(path);
+            loadObjFile(objPath);
+        }
+        Model(char *objPath, char *texturePath)
+        {
+            loadObjFile(objPath);
+            loadTextureFile(texturePath);  
         }
         void Draw(Shader &shader);	
     private:
@@ -19,7 +24,8 @@ class Model
         std::vector<std::shared_ptr<Mesh>> meshes;
         // std::string directory;
 
-        void loadObjFile(const std::string& path); 
+        void loadObjFile(const std::string& objPath);
+        Texture loadTextureFile(const std::string& texturePath);  
 };
 
 #endif
