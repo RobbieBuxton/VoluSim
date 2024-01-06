@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include "tracker.hpp"
 
+void debugInitPrint(); 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight);
 void processInput(GLFWwindow *window);

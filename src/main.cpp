@@ -26,44 +26,7 @@
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
-#ifdef DLIB_USE_CUDA
-    std::cout << "Dlib is compiled with CUDA support." << std::endl;
-#endif
-#ifdef DLIB_USE_FFTW
-    std::cout << "Dlib is compiled with FFTW support." << std::endl;
-#endif
-#ifdef DLIB_USE_BLAS
-    std::cout << "Dlib is compiled with BLAS support." << std::endl;
-#endif
-#ifdef DLIB_USE_LAPACK
-    std::cout << "Dlib is compiled with LAPACK support." << std::endl;
-#endif
-
-#ifdef __AVX__
-    std::cout << "AVX on" << std::endl;
-#endif
-#ifdef DLIB_HAVE_SSE2
-    std::cout << "DLIB_HAVE_SSE2 on" << std::endl;
-#endif
-#ifdef DLIB_HAVE_SSE3
-    std::cout << "DLIB_HAVE_SSE3 on" << std::endl;
-#endif
-#ifdef DLIB_HAVE_SSE41
-    std::cout << "DLIB_HAVE_SSE41 on" << std::endl;
-#endif
-#ifdef DLIB_HAVE_AVX
-    std::cout << "DLIB_HAVE_AVX on" << std::endl;
-#endif
-
-    int num_devices = cv::cuda::getCudaEnabledDeviceCount();
-    std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
-
-    if (geteuid() != 0)
-    {
-        std::cout << "ERROR: Application needs root to be able to use Tracker" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
+    debugInitPrint();
     GLuint maxPixelWidth = 3840;
     GLuint maxPixelHeight = 2160;
     GLuint pixelWidth = 3840;
@@ -85,14 +48,14 @@ int main()
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>();
 
-    Model room("data/resources/models/room.obj");
-    Model crate1("data/resources/models/crate.obj");
-    Model crate2("data/resources/models/crate.obj");
+    // Model room("data/resources/models/room.obj");
+    Model chessSet("data/resources/models/chessSet.obj");
+
     std::cout << "Finished Load" << std::endl;
 
+    glm::vec3 cameraOffset = glm::vec3(0.0f, 6.0f, -6.0f);
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 
-    glm::vec3 cameraOffset = glm::vec3(0.0f, 6.0f, -6.0f);
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -104,7 +67,7 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 model, scaleMatrix, translationMatrix;
+        glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix;
         // activate shader
         ourShader.use();
 
@@ -113,32 +76,25 @@ int main()
         ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->eyePos + cameraOffset));
 
         ourShader.setVec3("viewPos", trackerPtr->eyePos + cameraOffset);
-        ourShader.setVec3("lightPos", glm::vec3(0.0f, Display.height / 2, 40.0f));
+        ourShader.setVec3("lightPos", glm::vec3(0.0f, Display.height, 80.0f));
         ourShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
-        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, Display.height / 2.0, -Display.depth / 2.0));
-        model = translationMatrix * scaleMatrix;
-        ourShader.setMat4("model", model);
-        ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
+        // scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        // translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, Display.height / 2.0, -Display.depth / 2.0));
+        // model = translationMatrix * scaleMatrix;
+        // ourShader.setMat4("model", model);
+        // ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
 
-        room.Draw(ourShader);
+        // room.Draw(ourShader);
 
-        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(10, 10, 10));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.25f * Display.width, Display.height / 2.0, -Display.depth / 4.0));
-        model = translationMatrix * scaleMatrix;
+        centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
+        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -Display.depth / 2.0));
+        model = translationMatrix * scaleMatrix * centeringMatrix;
         ourShader.setMat4("model", model);
         ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
 
-        crate1.Draw(ourShader);
-
-        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(10, 10, 10));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-0.25f * Display.width, Display.height / 2.0, -3 * Display.depth / 4.0));
-        model = translationMatrix * scaleMatrix;
-        ourShader.setMat4("model", model);
-        ourShader.setVec3("objectColor", glm::vec3(0.0f, 0.5f, 0.5f));
-
-        crate2.Draw(ourShader);
+        chessSet.Draw(ourShader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -226,4 +182,45 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+}
+
+void debugInitPrint()
+{
+#ifdef DLIB_USE_CUDA
+    std::cout << "Dlib is compiled with CUDA support." << std::endl;
+#endif
+#ifdef DLIB_USE_FFTW
+    std::cout << "Dlib is compiled with FFTW support." << std::endl;
+#endif
+#ifdef DLIB_USE_BLAS
+    std::cout << "Dlib is compiled with BLAS support." << std::endl;
+#endif
+#ifdef DLIB_USE_LAPACK
+    std::cout << "Dlib is compiled with LAPACK support." << std::endl;
+#endif
+
+#ifdef __AVX__
+    std::cout << "AVX on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE2
+    std::cout << "DLIB_HAVE_SSE2 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE3
+    std::cout << "DLIB_HAVE_SSE3 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_SSE41
+    std::cout << "DLIB_HAVE_SSE41 on" << std::endl;
+#endif
+#ifdef DLIB_HAVE_AVX
+    std::cout << "DLIB_HAVE_AVX on" << std::endl;
+#endif
+
+    int num_devices = cv::cuda::getCudaEnabledDeviceCount();
+    std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
+
+    if (geteuid() != 0)
+    {
+        std::cout << "ERROR: Application needs root to be able to use Tracker" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 }
