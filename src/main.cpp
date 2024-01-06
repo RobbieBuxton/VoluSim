@@ -48,7 +48,7 @@ int main()
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>();
 
-    // Model room("data/resources/models/room.obj");
+    Model room("data/resources/models/room.obj");
     Model chessSet("data/resources/models/chessSet.obj");
 
     std::cout << "Finished Load" << std::endl;
@@ -71,7 +71,7 @@ int main()
         // activate shader
         ourShader.use();
 
-        std::cout << glm::to_string(trackerPtr->eyePos) << std::endl;
+        // std::cout << glm::to_string(trackerPtr->eyePos) << std::endl;
 
         ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->eyePos + cameraOffset));
 
@@ -79,17 +79,17 @@ int main()
         ourShader.setVec3("lightPos", glm::vec3(0.0f, Display.height, 80.0f));
         ourShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
-        // scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
-        // translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, Display.height / 2.0, -Display.depth / 2.0));
-        // model = translationMatrix * scaleMatrix;
-        // ourShader.setMat4("model", model);
-        // ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
+        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, Display.height / 2.0, -Display.depth / 2.0));
+        model = translationMatrix * scaleMatrix;
+        ourShader.setMat4("model", model);
+        ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
 
-        // room.Draw(ourShader);
+        room.Draw(ourShader);
 
         centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
         scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -Display.depth / 2.0));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, Display.height / 3.0, 0));
         model = translationMatrix * scaleMatrix * centeringMatrix;
         ourShader.setMat4("model", model);
         ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
