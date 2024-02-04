@@ -70,12 +70,9 @@ int main()
         glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix;
         // activate shader
         ourShader.use();
-
-        // std::cout << glm::to_string(trackerPtr->eyePos) << std::endl;
-
-        ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->eyePos + cameraOffset));
-
-        ourShader.setVec3("viewPos", trackerPtr->eyePos + cameraOffset);
+    
+        ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->getEyePos() + cameraOffset));
+        ourShader.setVec3("viewPos", trackerPtr->getEyePos() + cameraOffset);
         ourShader.setVec3("lightPos", glm::vec3(0.0f, Display.height, 80.0f));
         ourShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
@@ -95,6 +92,18 @@ int main()
         ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
 
         chessSet.Draw(ourShader);
+
+
+
+        // Need to convert this to render with opengl rather than opencv
+        if (!trackerPtr->getColorImage().empty())
+            cv::imshow("Color Image", trackerPtr->getColorImage());
+        if (!trackerPtr->getDepthImage().empty())
+        {
+            cv::Mat normalisedDepth;
+            cv::normalize(trackerPtr->getDepthImage(), normalisedDepth, 0, 255, cv::NORM_MINMAX, CV_8U);
+            cv::imshow("Depth Image", normalisedDepth);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();

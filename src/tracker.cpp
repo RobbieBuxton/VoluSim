@@ -120,8 +120,7 @@ void Tracker::updateEyePos()
         int depth_width = k4a_image_get_width_pixels(capture.cDepthImage);
         int depth_height = k4a_image_get_height_pixels(capture.cDepthImage);
         cv::Mat depth_mat(depth_height, depth_width, CV_16U, k4a_image_get_buffer(capture.cDepthImage), (size_t)k4a_image_get_stride_bytes(capture.cDepthImage));
-        cv::Mat depth_display;
-        cv::normalize(depth_mat, depth_display, 0, 255, cv::NORM_MINMAX, CV_8U);
+        depth_mat.copyTo(depthImage);
 
         // This is pretty inefficent, needs a refactor to directly convert into bgr instead of bgra then bgr
         cv::Mat bgraImage(k4a_image_get_height_pixels(capture.cColorImage), k4a_image_get_width_pixels(capture.cColorImage), CV_8UC4, k4a_image_get_buffer(capture.cColorImage), (size_t)k4a_image_get_stride_bytes(capture.cColorImage));
@@ -141,7 +140,9 @@ void Tracker::updateEyePos()
             cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
         }
 
+       
         cv::Mat processedBgrImage(bgrImageGpu);
+        processedBgrImage.copyTo(colorImage);
 
         dlib::cv_image<dlib::bgr_pixel> dlib_img = dlib::cv_image<dlib::bgr_pixel>(processedBgrImage);
 
@@ -157,10 +158,6 @@ void Tracker::updateEyePos()
 
         if (dets.empty())
         {
-            cv::Mat flipped_depth_display;
-            cv::flip(depth_display, flipped_depth_display, 1);
-            // cv::imshow("Color Image", flipped_depth_display);
-            cv::waitKey(1);
             throw FailedToDetectFaceException();
         }
 
@@ -172,7 +169,6 @@ void Tracker::updateEyePos()
             cv::Point leftEye(
                 (shape.part(0).x() + shape.part(1).x()) * pow(2, scale_factor) / 2.0,
                 (shape.part(0).y() + shape.part(1).y()) * pow(2, scale_factor) / 2.0);
-            cv::circle(depth_display, leftEye, 10, cv::Scalar(0, 255, 0), -1);
 
             ushort depth = depth_mat.at<ushort>(leftEye.y, leftEye.x);
             k4a_float2_t k4a_point = {static_cast<float>(leftEye.x), static_cast<float>(leftEye.y)};
@@ -193,14 +189,28 @@ void Tracker::updateEyePos()
 
         }
         cv::Mat flipped_depth_display;
-        cv::flip(depth_display, flipped_depth_display, 1);
-        // cv::imshow("Color Image", flipped_depth_display);
         cv::waitKey(1);
     }
     catch (const std::exception &e)
     {
         throw;
     }
+}
+
+
+glm::vec3 Tracker::getEyePos()
+{
+    return eyePos;
+}
+
+cv::Mat Tracker::getDepthImage()
+{
+    return depthImage;
+}
+
+cv::Mat Tracker::getColorImage()
+{
+    return colorImage;
 }
 
 Tracker::~Tracker()
@@ -276,3 +286,4 @@ Tracker::Capture::~Capture()
     k4a_image_release(cDepthImage);
     k4a_image_release(dDepthImage);
 }
+

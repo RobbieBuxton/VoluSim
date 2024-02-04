@@ -26,16 +26,25 @@ public:
     ~Tracker();
     void updateEyePos();
     void close();
-
+    glm::vec3 getEyePos();
+    cv::Mat getDepthImage();
+    cv::Mat getColorImage();
+    
+private:
     k4a_device_t device;
     k4a_device_configuration_t config;
     k4a_calibration_t calibration;
     k4a_transformation_t transformation;
-    net_type cnn_face_detector;
-    dlib::shape_predictor predictor;
+    
     glm::vec3 eyePos;
 
-private:
+    net_type cnn_face_detector;
+
+    dlib::shape_predictor predictor;
+
+    cv::Mat colorImage;
+    cv::Mat depthImage;
+
     class Capture
     {
     public:
