@@ -1,37 +1,17 @@
-{ pkgs, k4apkgs, tinyobjloaderSrc }:
+{ pkgs, k4apkgs, tolHeader }:
 pkgs.mkShell rec {
   name = "volumetricSim";
 
-  enableParallelBuilding = true;
-
-  packages = [
-    k4apkgs.libk4a-dev
-    k4apkgs.k4a-tools
-    pkgs.nixpkgs-fmt
-
-    #Setup and window
-    pkgs.gcc
-    pkgs.python310Packages.glad2
-    pkgs.glxinfo
-    pkgs.killall
-    pkgs.jq
-
-    # Libs
-    pkgs.dlib
-    pkgs.opencv
-    pkgs.cudatoolkit
-    pkgs.cudaPackages.cudnn
-    pkgs.linuxPackages.nvidia_x11
-    pkgs.glfw
-    pkgs.glm
-    pkgs.stb
-    pkgs.xorg.libX11
-    pkgs.xorg.libXrandr
-    pkgs.xorg.libXi
-
-    # Debug 
-    pkgs.dpkg
-  ];
+  packages = with pkgs; [
+    # #Setup and window
+    gcc
+    python310Packages.glad2
+    glxinfo
+    killall
+    jq
+  ] ++ (with k4apkgs; [
+    k4a-tools
+  ]);
 
   # This is a hook that is run when the shell is entered (it creates the .vscode directory and the c_cpp_properties.json file for vscode to use for intellisense)
   shellHook =
@@ -69,7 +49,7 @@ pkgs.mkShell rec {
       jq --indent 4 -n '${
         builtins.toJSON vscodeCppConfig
       }' >> ${vscodeDir}/c_cpp_properties.json
-      mkdir -p ${vscodeDir}/include && cp ${tinyobjloaderSrc} ./${vscodeDir}/include/tiny_obj_loader.h
+      mkdir -p ${vscodeDir}/include && cp ${tolHeader} ./${vscodeDir}/include/tiny_obj_loader.h
       trap "rm ${vscodeDir} -rf;" exit 
     '';
 }

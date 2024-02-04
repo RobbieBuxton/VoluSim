@@ -10,10 +10,13 @@
     let
       system = "x86_64-linux";
 
-      tinyobjloaderSrc = builtins.fetchurl {
+      # Fetch the tinyobjloader header file
+      tolHeader = builtins.fetchurl {
         url = "https://raw.githubusercontent.com/tinyobjloader/tinyobjloader/release/tiny_obj_loader.h";
         sha256 = "sha256:1yhdm96zmpak0gma019xh9d0v1m99vm0akk5qy7v4gyaj0a50690";
       };
+
+      # Import the k4a package set (Azure Kinect Packages) 
       k4apkgs = k4a.packages.${system};
 
       pkgs = import nixpkgs {
@@ -27,11 +30,12 @@
       # Development shell used by running "nix develop".
       # It will configure vscode settings for finding the correct c++ libs for Intellisense
       devShells.${system}.default = import ./shell.nix {
-        inherit pkgs k4apkgs tinyobjloaderSrc;
+        inherit pkgs k4apkgs tolHeader;
       };
 
-      packages.${system} = pkgs.callPackage ./default.nix {
-        inherit pkgs k4apkgs tinyobjloaderSrc;
+      # The volumetric screen simulation package
+      packages.${system} = pkgs.callPackage ./package.nix {
+        inherit pkgs k4apkgs tolHeader;
       };
     };
 }

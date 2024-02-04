@@ -1,4 +1,4 @@
-{ pkgs, k4apkgs, tinyobjloaderSrc }:
+{ pkgs, k4apkgs, tolHeader }:
 {
   default = pkgs.cudaPackages.backendStdenv.mkDerivation {
     pname = "volumetricSim";
@@ -8,34 +8,34 @@
 
     src = ./.;
 
-    buildInputs = [
-      pkgs.python310Packages.glad2
-      pkgs.bzip2
-      pkgs.glxinfo
-
-      # Libs
-      pkgs.assimp
-      pkgs.dlib
-      pkgs.libpng
-      pkgs.libjpeg
-      pkgs.opencv
-      pkgs.cudatoolkit
-      pkgs.cudaPackages.cudnn
-      pkgs.linuxPackages.nvidia_x11
-      k4apkgs.libk4a-dev
-      k4apkgs.k4a-tools
-      pkgs.glfw
-      pkgs.glm
-      pkgs.stb
-      pkgs.xorg.libX11
-      pkgs.xorg.libXrandr
-      pkgs.xorg.libXi
-      pkgs.udev
-      pkgs.mkl
+    nativeBuildInputs = with pkgs; [
+      python310Packages.glad2
+      bzip2
+      glxinfo
     ];
+
+    buildInputs = with pkgs; [
+      dlib
+      opencv
+      cudatoolkit
+      cudaPackages.cudnn
+      linuxPackages.nvidia_x11
+      glfw
+      glm
+      stb
+      xorg.libX11
+      xorg.libXrandr
+      xorg.libXi
+      udev
+      mkl
+    ] ++ (with k4apkgs; [
+      libk4a-dev
+      k4a-tools
+    ]);
 
     configurePhase =
       let
+        # Download the face landmarks and human face detector models
         faceLandmarksSrc = builtins.fetchurl {
           url =
             "http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2";
@@ -49,7 +49,7 @@
         };
       in
       ''
-        cp ${tinyobjloaderSrc} ./include/tiny_obj_loader.h
+        cp ${tolHeader} ./include/tiny_obj_loader.h
         cd data
         cp ${faceLandmarksSrc} ./shape_predictor_5_face_landmarks.dat.bz2
         bzip2 -d ./shape_predictor_5_face_landmarks.dat.bz2
@@ -64,9 +64,6 @@
         flags = [
           "-Ofast"
           "-Wall"
-          # "-fsanitize=address"
-          # "-fsanitize=undefined"
-          # "-fsanitize=thread"
           "-march=skylake" # This is platform specific need to find a way to optimise this
         ];
         sources = [
