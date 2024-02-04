@@ -21,10 +21,11 @@ private:
     glm::vec3 pb;
     glm::vec3 pc;
     // Orthonomal basis for the screen
-    glm::vec3 vr;
-    glm::vec3 vu;
-    glm::vec3 vn;
+    glm::vec3 sr;
+    glm::vec3 su;
+    glm::vec3 sn;
 
+    // Distance to near and far clipping planes
     const GLfloat n;
     const GLfloat f;
 };
