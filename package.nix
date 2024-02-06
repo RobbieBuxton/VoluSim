@@ -72,6 +72,7 @@
           "src/tracker.cpp"
           "src/model.cpp"
           "src/mesh.cpp"
+          "src/image.cpp"
           "${gladBuildDir}/src/gl.c"
         ];
         libs = [

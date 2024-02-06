@@ -22,6 +22,7 @@
 #include "filesystem.hpp"
 #include "shader.hpp"
 #include "model.hpp"
+#include "image.hpp"
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -35,7 +36,7 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader ourShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
+    Shader modelShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
 
     // Robbie's Screen
     // Depth is artifical the others are real
@@ -58,6 +59,8 @@ int main()
 
     // render loop
     // -----------
+    Image colourCamera = Image(glm::vec2(0.01,0.99), glm::vec2(0.16,0.84)); 
+    Image depthCamera = Image(glm::vec2(0.17,0.99), glm::vec2(0.32,0.84));
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
@@ -69,41 +72,45 @@ int main()
 
         glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix;
         // activate shader
-        ourShader.use();
+        modelShader.use();
     
-        ourShader.setMat4("projection", Display.projectionToEye(trackerPtr->getEyePos() + cameraOffset));
-        ourShader.setVec3("viewPos", trackerPtr->getEyePos() + cameraOffset);
-        ourShader.setVec3("lightPos", glm::vec3(0.0f, Display.height, 80.0f));
-        ourShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+        modelShader.setMat4("projection", Display.projectionToEye(trackerPtr->getEyePos() + cameraOffset));
+        modelShader.setVec3("viewPos", trackerPtr->getEyePos() + cameraOffset);
+        modelShader.setVec3("lightPos", glm::vec3(0.0f, Display.height, 80.0f));
+        modelShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
         scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
         translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, Display.height / 2.0, -Display.depth / 2.0));
         model = translationMatrix * scaleMatrix;
-        ourShader.setMat4("model", model);
-        ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
+        modelShader.setMat4("model", model);
+        modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
 
-        room.Draw(ourShader);
+        room.Draw(modelShader);
 
         centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
         scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
         translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, Display.height / 3.0, 0));
         model = translationMatrix * scaleMatrix * centeringMatrix;
-        ourShader.setMat4("model", model);
-        ourShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
+        modelShader.setMat4("model", model);
+        modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
 
-        chessSet.Draw(ourShader);
+        chessSet.Draw(modelShader);
 
-
-
+    
         // Need to convert this to render with opengl rather than opencv
         if (!trackerPtr->getColorImage().empty())
-            cv::imshow("Color Image", trackerPtr->getColorImage());
+            colourCamera.updateImage(trackerPtr->getColorImage());
+
         if (!trackerPtr->getDepthImage().empty())
         {
             cv::Mat normalisedDepth;
             cv::normalize(trackerPtr->getDepthImage(), normalisedDepth, 0, 255, cv::NORM_MINMAX, CV_8U);
-            cv::imshow("Depth Image", normalisedDepth);
+            depthCamera.updateImage(normalisedDepth);
         }
+
+        
+        colourCamera.displayImage();
+        depthCamera.displayImage();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
