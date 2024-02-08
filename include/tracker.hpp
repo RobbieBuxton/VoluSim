@@ -24,18 +24,19 @@ class Tracker
 public:
     Tracker();
     ~Tracker();
-    void updateEyePos();
+    void update();
     void close();
     glm::vec3 getEyePos();
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
-    
+    std::vector<cv::Point3d> getPointCloud();
+
 private:
     k4a_device_t device;
     k4a_device_configuration_t config;
     k4a_calibration_t calibration;
     k4a_transformation_t transformation;
-    
+
     glm::vec3 eyePos;
 
     net_type cnn_face_detector;
@@ -61,6 +62,8 @@ private:
         k4a_capture_t capture = NULL;
         int32_t timeout = 17;
     };
+
+    std::unique_ptr<Capture> captureInstance;
 };
 
 #endif

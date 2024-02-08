@@ -95,6 +95,7 @@
           "-lopencv_cudafilters"
           "-lopencv_cudawarping"
           "-lopencv_features2d"
+          "-lopencv_cudaimgproc"
           "-lopencv_flann"
           "-ldlib"
           "-lcudart"

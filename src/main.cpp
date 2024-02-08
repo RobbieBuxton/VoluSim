@@ -12,9 +12,11 @@
 #include <thread>
 #include <chrono>
 #include <opencv2/core.hpp>
+
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/cuda.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "main.hpp"
 #include "display.hpp"
@@ -59,10 +61,39 @@ int main()
 
     // render loop
     // -----------
-    Image colourCamera = Image(glm::vec2(0.01,0.99), glm::vec2(0.16,0.84)); 
-    Image depthCamera = Image(glm::vec2(0.17,0.99), glm::vec2(0.32,0.84));
+    Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
+    Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
+    Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
+
+    // Timing variables
+    double lastTime = glfwGetTime();
+    int nbFrames = 0;
+
+    glm::vec3 lastEyePos = trackerPtr->getEyePos() + cameraOffset;
+    // Initialize a counter for eye position changes
+    int eyePosChangeCount = 0;
+
     while (!glfwWindowShouldClose(window))
     {
+        // Measure speed
+        double currentTime = glfwGetTime();
+        nbFrames++;
+        // Check if the eye position has changed
+        glm::vec3 currentEyePos = trackerPtr->getEyePos() + cameraOffset;
+        if (glm::length(currentEyePos - lastEyePos) > std::numeric_limits<float>::epsilon())
+        {
+            // Eye position has changed
+            eyePosChangeCount++;
+            lastEyePos = currentEyePos; // Update the last eye position
+        }
+
+        if ( currentTime - lastTime >= 1.0 ){
+            debugInfo.updateImage(generateDebugPrintBox(eyePosChangeCount));
+            nbFrames = 0;
+            lastTime += 1.0;
+            eyePosChangeCount = 0;
+        }
+
         processInput(window);
 
         // render
@@ -73,9 +104,9 @@ int main()
         glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix;
         // activate shader
         modelShader.use();
-    
-        modelShader.setMat4("projection", Display.projectionToEye(trackerPtr->getEyePos() + cameraOffset));
-        modelShader.setVec3("viewPos", trackerPtr->getEyePos() + cameraOffset);
+
+        modelShader.setMat4("projection", Display.projectionToEye(currentEyePos));
+        modelShader.setVec3("viewPos", currentEyePos);
         modelShader.setVec3("lightPos", glm::vec3(0.0f, Display.height, 80.0f));
         modelShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
@@ -96,21 +127,20 @@ int main()
 
         chessSet.Draw(modelShader);
 
-    
         // Need to convert this to render with opengl rather than opencv
         if (!trackerPtr->getColorImage().empty())
             colourCamera.updateImage(trackerPtr->getColorImage());
 
         if (!trackerPtr->getDepthImage().empty())
         {
-            cv::Mat normalisedDepth;
-            cv::normalize(trackerPtr->getDepthImage(), normalisedDepth, 0, 255, cv::NORM_MINMAX, CV_8U);
-            depthCamera.updateImage(normalisedDepth);
+            depthCamera.updateImage(trackerPtr->getDepthImage());
         }
 
-        
+        debugInfo.displayImage();
         colourCamera.displayImage();
         depthCamera.displayImage();
+
+        std::vector<cv::Point3d> pointCloud = trackerPtr->getPointCloud();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -121,6 +151,36 @@ int main()
     // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
+}
+
+cv::Mat generateDebugPrintBox(int fps)
+{
+    cv::Mat img = cv::Mat::zeros(500, 500, CV_8UC3);
+    img.setTo(cv::Scalar(255, 255, 255)); // Set the color to white
+
+    // Set the text parameters
+    std::string text = "Camera FPS: " + std::to_string(fps);
+
+    int fontFace = cv::FONT_HERSHEY_COMPLEX;
+    double fontScale = 1.25;
+    int thickness = 2;
+    cv::Scalar textColor(0, 0, 0); // Black color for the text
+    int baseline = 0;
+
+    // Calculate the text size
+    cv::Size textSize = cv::getTextSize(text, fontFace, fontScale, thickness, &baseline);
+    baseline += thickness;
+
+    // Center the text
+    cv::Point textOrg((img.cols - textSize.width) / 2, (img.rows + textSize.height) / 2);
+
+    // Put the text on the image
+    cv::putText(img, text, textOrg, fontFace, fontScale, textColor, thickness);
+ 
+    // Flip along the horizontal axis
+    cv::flip(img, img, 0);
+    cv::flip(img, img, 1);
+    return img;
 }
 
 GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
@@ -176,7 +236,7 @@ void pollTracker(Tracker *trackerPtr, GLFWwindow *window)
     {
         try
         {
-            trackerPtr->updateEyePos();
+            trackerPtr->update();
         }
         catch (const std::exception &e)
         {

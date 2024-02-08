@@ -74,6 +74,8 @@ void Image::updateImage(const cv::Mat &image)
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageRGB.cols, imageRGB.rows, 0, GL_RGB, GL_UNSIGNED_BYTE, imageRGB.data);
 
+    imageRGB.release();
+
     glBindTexture(GL_TEXTURE_2D, 0);
     return;
 }
