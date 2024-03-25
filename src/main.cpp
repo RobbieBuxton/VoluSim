@@ -25,6 +25,7 @@
 #include "shader.hpp"
 #include "model.hpp"
 #include "image.hpp"
+#include "pointcloud.hpp"
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -61,6 +62,7 @@ int main()
 
     // render loop
     // -----------
+    PointCloud points = PointCloud();
     Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
     Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
     Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
@@ -69,7 +71,7 @@ int main()
     double lastTime = glfwGetTime();
     int nbFrames = 0;
 
-    glm::vec3 lastEyePos = trackerPtr->getEyePos() + cameraOffset;
+    glm::vec3 lastEyePos = trackerPtr->getLeftEyePos() + cameraOffset;
     // Initialize a counter for eye position changes
     int eyePosChangeCount = 0;
 
@@ -79,7 +81,7 @@ int main()
         double currentTime = glfwGetTime();
         nbFrames++;
         // Check if the eye position has changed
-        glm::vec3 currentEyePos = trackerPtr->getEyePos() + cameraOffset;
+        glm::vec3 currentEyePos = trackerPtr->getLeftEyePos() + cameraOffset;
         if (glm::length(currentEyePos - lastEyePos) > std::numeric_limits<float>::epsilon())
         {
             // Eye position has changed
@@ -87,7 +89,8 @@ int main()
             lastEyePos = currentEyePos; // Update the last eye position
         }
 
-        if ( currentTime - lastTime >= 1.0 ){
+        if (currentTime - lastTime >= 1.0)
+        {
             debugInfo.updateImage(generateDebugPrintBox(eyePosChangeCount));
             nbFrames = 0;
             lastTime += 1.0;
@@ -135,22 +138,43 @@ int main()
         {
             depthCamera.updateImage(trackerPtr->getDepthImage());
         }
+        points.updateCloud(trackerPtr->getPointCloud());
 
         debugInfo.displayImage();
         colourCamera.displayImage();
         depthCamera.displayImage();
-
-        std::vector<cv::Point3d> pointCloud = trackerPtr->getPointCloud();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
     trackerThread.join();
 
+    std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
+
+    points.save(miscPath + "pointCloud.csv");
+    colourCamera.save(miscPath + "colourImage.png");
+    depthCamera.save(miscPath + "depthImage.png");
+    saveVec3ToCSV(trackerPtr->getLeftEyePos(), miscPath + "leftEyePos.csv");
+    saveVec3ToCSV(trackerPtr->getRightEyePos(), miscPath + "rightEyePos.csv");
+
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
+}
+
+//This should be refactored/removed/done properly
+void saveVec3ToCSV(const glm::vec3& vec, const std::string& filename) {
+    std::ofstream file(filename); 
+
+    if (file.is_open()) {
+        // Write the glm::vec3 components to the file separated by commas
+        file << vec.x << "," << vec.y << "," << vec.z << std::endl;
+        file.close();
+    } else {
+        // Handle error
+        std::cerr << "Unable to open file: " << filename << std::endl;
+    }
 }
 
 cv::Mat generateDebugPrintBox(int fps)
@@ -176,7 +200,7 @@ cv::Mat generateDebugPrintBox(int fps)
 
     // Put the text on the image
     cv::putText(img, text, textOrg, fontFace, fontScale, textColor, thickness);
- 
+
     // Flip along the horizontal axis
     cv::flip(img, img, 0);
     cv::flip(img, img, 1);

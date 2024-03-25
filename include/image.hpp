@@ -13,6 +13,7 @@ public:
 
     void updateImage(const cv::Mat &image);
     void displayImage();
+    void save(const std::string& filename);
     GLuint textureID;
     Shader *shader;
     GLuint VBO, VAO, EBO;

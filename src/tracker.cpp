@@ -112,7 +112,7 @@ Tracker::Tracker()
         dlib::deserialize(FileSystem::getPath("data/mmod_human_face_detector.dat").c_str()) >> cnn_face_detector;
 
         // Head distance 50cm
-        eyePos = glm::vec3(0.0f, 0.0f, 50.0f);
+        leftEyePos = glm::vec3(0.0f, 0.0f, 50.0f);
     }
 }
 
@@ -131,7 +131,7 @@ std::vector<cv::Point3d> Tracker::getPointCloud()
     int width = k4a_image_get_width_pixels(captureInstance->dDepthImage);
 
     // Get the depth image buffer
-    uint16_t* depthBuffer = reinterpret_cast<uint16_t*>(k4a_image_get_buffer(captureInstance->dDepthImage));
+    uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->dDepthImage));
 
     for (int y = 0; y < height; y++)
     {
@@ -160,7 +160,7 @@ std::vector<cv::Point3d> Tracker::getPointCloud()
             pointCloud.push_back(cv::Point3d(camera_point.xyz.x / 10.0, camera_point.xyz.y / 10.0, camera_point.xyz.z / 10.0));
         }
     }
-    
+
     return pointCloud;
 }
 
@@ -178,11 +178,11 @@ void Tracker::update()
 
         // Perform any GPU-based image processing
         cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
-        
+
         // Download the processed image from GPU to CPU for further processing with Dlib
         cv::Mat processedBgrImage;
         bgrImageGpu.download(processedBgrImage);
-        
+
         dlib::cv_image<dlib::bgr_pixel> dlib_img = dlib::cv_image<dlib::bgr_pixel>(processedBgrImage);
 
         std::vector<dlib::matrix<dlib::rgb_pixel>> batch;
@@ -219,7 +219,8 @@ void Tracker::update()
         }
 
         std::vector<cv::Point> eyes;
-        for (int i = 0; i < faces.size(); i++) {
+        for (int i = 0; i < faces.size(); i++)
+        {
             // We don't need to div by 2 because we pyradown the image
             eyes.push_back(cv::Point(
                 landmarks[i].part(0).x() + landmarks[i].part(1).x(),
@@ -228,25 +229,12 @@ void Tracker::update()
                 landmarks[i].part(2).x() + landmarks[i].part(3).x(),
                 landmarks[i].part(2).y() + landmarks[i].part(3).y()));
 
-            ushort depth = dImage.at<ushort>(eyes[0].y, eyes[0].x);
-            k4a_float2_t k4a_point = {static_cast<float>(eyes[0].x), static_cast<float>(eyes[0].y)};
-            k4a_float3_t camera_point;
-            int valid;
-            if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &k4a_point, depth, K4A_CALIBRATION_TYPE_COLOR, K4A_CALIBRATION_TYPE_COLOR, &camera_point, &valid))
-            {
-                std::cout << "Failed to convert from 2d to 3d" << std::endl;
-                exit(EXIT_FAILURE);
-            }
-
-            if (!valid)
-            {
-                std::cout << "Failed to convert to valid 3d coords" << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            eyePos = glm::vec3((-(float)camera_point.xyz.x) / 10.0, -((float)camera_point.xyz.y) / 10.0, ((float)camera_point.xyz.z) / 10.0);
+            // Left eye
+            leftEyePos = calculateEyePos(eyes[0], dImage);
+            rightEyePos = calculateEyePos(eyes[1], dImage);
         }
 
-        //Draw Detected faces on output
+        // Draw Detected faces on output
         for (unsigned long i = 0; i < faces.size(); i++)
         {
             cv::rectangle(colorImage, cv::Point(faces[i].left(), faces[i].top()), cv::Point(faces[i].right(), faces[i].bottom()), cv::Scalar(0, 255, 0), 2);
@@ -256,7 +244,7 @@ void Tracker::update()
             }
         }
 
-        //Draw location depth is sampled from
+        // Draw location depth is sampled from
         for (unsigned long i = 0; i < eyes.size(); i++)
         {
             cv::circle(depthImage, eyes[i], 10, cv::Scalar(255, 0, 0), -1);
@@ -270,10 +258,34 @@ void Tracker::update()
     }
 }
 
-
-glm::vec3 Tracker::getEyePos()
+glm::vec3 Tracker::calculateEyePos(cv::Point eye, cv::Mat dImage)
 {
-    return eyePos;
+    ushort eyeDepthLeft = dImage.at<ushort>(eye.y, eye.x);
+    k4a_float2_t eyeK4APointLeft = {static_cast<float>(eye.x), static_cast<float>(eye.y)};
+    k4a_float3_t cameraPointLeft;
+    int valid;
+    if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &eyeK4APointLeft, eyeDepthLeft, K4A_CALIBRATION_TYPE_COLOR, K4A_CALIBRATION_TYPE_COLOR, &cameraPointLeft, &valid))
+    {
+        std::cout << "Failed to convert from 2d to 3d" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (!valid)
+    {
+        std::cout << "Failed to convert to valid 3d coords" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return glm::vec3((-(float)cameraPointLeft.xyz.x) / 10.0, -((float)cameraPointLeft.xyz.y) / 10.0, ((float)cameraPointLeft.xyz.z) / 10.0);
+}
+
+glm::vec3 Tracker::getLeftEyePos()
+{
+    return leftEyePos;
+}
+
+glm::vec3 Tracker::getRightEyePos()
+{
+    return rightEyePos;
 }
 
 cv::Mat Tracker::getDepthImage()
@@ -359,4 +371,3 @@ Tracker::Capture::~Capture()
     k4a_image_release(cDepthImage);
     k4a_image_release(dDepthImage);
 }
-

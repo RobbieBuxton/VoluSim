@@ -2,10 +2,11 @@
 pkgs.mkShell rec {
   name = "volumetricSim";
 
-  packages = with pkgs; [
-    # #Setup and window
-    gcc
-    python310Packages.glad2
+  packages = with pkgs; [   
+    #Remove this if you want the shell to compile in a reasonable amount of time.
+    python311Packages.pyvista
+
+    python311Packages.glad2
     glxinfo
     killall
     jq

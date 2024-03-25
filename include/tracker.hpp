@@ -26,18 +26,21 @@ public:
     ~Tracker();
     void update();
     void close();
-    glm::vec3 getEyePos();
+    glm::vec3 getLeftEyePos();
+    glm::vec3 getRightEyePos();
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
     std::vector<cv::Point3d> getPointCloud();
 
 private:
+    glm::vec3 calculateEyePos(cv::Point eye, cv::Mat dImage);
     k4a_device_t device;
     k4a_device_configuration_t config;
     k4a_calibration_t calibration;
     k4a_transformation_t transformation;
 
-    glm::vec3 eyePos;
+    glm::vec3 leftEyePos;
+    glm::vec3 rightEyePos;
 
     net_type cnn_face_detector;
 

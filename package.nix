@@ -73,6 +73,7 @@
           "src/model.cpp"
           "src/mesh.cpp"
           "src/image.cpp"
+          "src/pointcloud.cpp"
           "${gladBuildDir}/src/gl.c"
         ];
         libs = [

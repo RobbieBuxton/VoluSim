@@ -94,6 +94,41 @@ void Image::displayImage()
     glBindVertexArray(0);
 }
 
+void Image::save(const std::string& filename)
+{
+    // Assume the image dimensions are known or stored within the class. If not, they need to be provided.
+    int width, height;
+    // Bind the texture to read from
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    
+    // Retrieve the texture size
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+
+    // Allocate memory for reading back the texture
+    auto* pixels = new unsigned char[width * height * 3]; // 3 channels for RGB
+
+    // Get the texture data
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+    // Convert from RGB (OpenGL) to BGR (OpenCV)
+    for (int i = 0; i < width * height; ++i) {
+        std::swap(pixels[i * 3], pixels[i * 3 + 2]);
+    }
+
+    // Create an OpenCV Mat from the pixel data
+    cv::Mat image(height, width, CV_8UC3, pixels);
+
+    // Save the image
+    cv::imwrite(filename, image);
+
+    // Clean up
+    delete[] pixels;
+
+    // Unbind the texture
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 Image::~Image()
 {
     delete shader;
