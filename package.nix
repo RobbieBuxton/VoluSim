@@ -10,6 +10,7 @@
 
     nativeBuildInputs = with pkgs; [
       python310Packages.glad2
+      addOpenGLRunpath
       bzip2
       glxinfo
     ];
@@ -17,9 +18,6 @@
     buildInputs = with pkgs; [
       dlib
       opencv
-      cudatoolkit
-      cudaPackages.cudnn
-      linuxPackages.nvidia_x11
       glfw
       glm
       stb
@@ -31,6 +29,14 @@
     ] ++ (with k4apkgs; [
       libk4a-dev
       k4a-tools
+    ]) 
+    ++ (with cudaPackages; [
+      cudnn
+      cuda_nvcc
+      cuda_cudart
+      libcublas
+      libcurand
+      libcusolver
     ]);
 
     configurePhase =
@@ -100,7 +106,6 @@
           "-lopencv_flann"
           "-ldlib"
           "-lcudart"
-          "-lcuda"
           "-lcudnn"
           "-lcublas"
           "-lcurand"
@@ -131,5 +136,10 @@
       cp volumetricSim $out/bin
       cp -a data $out/data
     '';
+
+    # # Not sure if this is needed
+    # postFixup = ''
+    #   addOpenGLRunpath  $out/bin/volumetricSim
+    # '';
   };
 }

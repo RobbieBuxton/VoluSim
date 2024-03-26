@@ -5,7 +5,6 @@ pkgs.mkShell rec {
   packages = with pkgs; [   
     #Remove this if you want the shell to compile in a reasonable amount of time.
     python311Packages.pyvista
-
     python311Packages.glad2
     glxinfo
     killall
