@@ -7,7 +7,7 @@ PointCloud::PointCloud()
 {
 };
 
-void PointCloud::updateCloud(std::vector<cv::Point3d> points)
+void PointCloud::updateCloud(std::vector<glm::vec3> points)
 {
     this->points = points;
 }

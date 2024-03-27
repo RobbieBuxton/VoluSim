@@ -10,7 +10,6 @@
 
     nativeBuildInputs = with pkgs; [
       python310Packages.glad2
-      addOpenGLRunpath
       bzip2
       glxinfo
     ];
@@ -136,10 +135,5 @@
       cp volumetricSim $out/bin
       cp -a data $out/data
     '';
-
-    # # Not sure if this is needed
-    # postFixup = ''
-    #   addOpenGLRunpath  $out/bin/volumetricSim
-    # '';
   };
 }

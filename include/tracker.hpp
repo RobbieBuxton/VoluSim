@@ -19,6 +19,7 @@ using rcon5 = dlib::relu<dlib::affine<con5<45, SUBNET>>>;
 
 using net_type = dlib::loss_mmod<dlib::con<1, 9, 9, 1, 1, rcon5<rcon5<rcon5<downsampler<dlib::input_rgb_image_pyramid<dlib::pyramid_down<6>>>>>>>>;
 
+
 class Tracker
 {
 public:
@@ -30,10 +31,10 @@ public:
     glm::vec3 getRightEyePos();
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
-    std::vector<cv::Point3d> getPointCloud();
+    std::vector<glm::vec3> getPointCloud();
 
 private:
-    glm::vec3 calculateEyePos(cv::Point eye, cv::Mat dImage);
+    glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
     k4a_device_t device;
     k4a_device_configuration_t config;
     k4a_calibration_t calibration;
@@ -54,13 +55,19 @@ private:
     public:
         Capture(k4a_device_t device, k4a_transformation_t transformation);
         ~Capture();
-        // c prefix means in colour coord space, d means in depth/ir coord space
-        k4a_image_t cColorImage;
-        k4a_image_t cDepthImage;
-        // k4a_image_t cIRImage;
-        // k4a_image_t dColorImage;
-        k4a_image_t dDepthImage;
-        // k4a_image_t dIRImage;
+        struct ImageSpace
+        {
+            int height;
+            int width;
+            k4a_image_t colorImage;
+            k4a_image_t depthImage;
+            // k4a_image_t IRImage;
+        };
+
+        // color coord space
+        ImageSpace colorSpace;
+        // depth/ir coord space
+        ImageSpace depthSpace;
     private:
         k4a_capture_t capture = NULL;
         int32_t timeout = 17;

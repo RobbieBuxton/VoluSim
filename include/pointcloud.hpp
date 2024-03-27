@@ -2,7 +2,8 @@
 #define POINT_CLOUD_H
 
 #include <vector> 
-#include <opencv2/core/types.hpp> 
+#include <string>
+#include <glm/glm.hpp>
 
 class PointCloud
 {
@@ -10,10 +11,10 @@ public:
 
     PointCloud();
     ~PointCloud();
-    void updateCloud(std::vector<cv::Point3d> points);
+    void updateCloud(std::vector<glm::vec3> points);
     void save(const std::string& filename);
 private:
-    std::vector<cv::Point3d> points;
+    std::vector<glm::vec3> points;
 };
 
 #endif

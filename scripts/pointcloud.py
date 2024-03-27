@@ -3,7 +3,7 @@ import numpy as np
 
 def load_eye_position(file_path):
     # Assuming the eye position CSV contains a single row with x,y,z coordinates
-    return np.loadtxt(file_path, delimiter=',', skiprows=0).reshape(1, 3)  # Ensure it's shaped as (1, 3)
+    return np.loadtxt(file_path, delimiter=',', skiprows=0) 
 
 def visualize_point_cloud_pyvista(file_path, left_eye_path, right_eye_path, z_min=0, z_max=500, distance_threshold=100):
     # Load the point cloud data
@@ -14,8 +14,6 @@ def visualize_point_cloud_pyvista(file_path, left_eye_path, right_eye_path, z_mi
     right_eye_pos = load_eye_position(right_eye_path)
     
     # Apply z-range filtering
-    z_mask = (data[:, 2] >= z_min) & (data[:, 2] <= z_max)
-    data = data[z_mask]
 
     # Calculate distances to each eye and filter
     distances_to_left_eye = np.linalg.norm(data[:, :3] - left_eye_pos, axis=1)
@@ -29,7 +27,7 @@ def visualize_point_cloud_pyvista(file_path, left_eye_path, right_eye_path, z_mi
     
     # Create a plotter and add the main point cloud
     plotter = pv.Plotter()
-    plotter.add_points(point_cloud, cmap="viridis", point_size=1)
+    plotter.add_points(point_cloud, cmap="viridis", point_size=1.5)
     
     # Add the eye positions in red
     eye_positions = np.vstack([left_eye_pos, right_eye_pos])

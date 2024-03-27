@@ -116,48 +116,52 @@ Tracker::Tracker()
     }
 }
 
-std::vector<cv::Point3d> Tracker::getPointCloud()
+glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_type)
 {
-    std::vector<cv::Point3d> pointCloud;
-    if (captureInstance == nullptr)
+    uint16_t depth;
+    if (source_type == K4A_CALIBRATION_TYPE_COLOR)
+    {
+        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->colorSpace.depthImage));
+        int index = y * captureInstance->colorSpace.width + x;
+        depth = depthBuffer[index];
+    }
+    else if (source_type == K4A_CALIBRATION_TYPE_DEPTH)
+    {
+        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->depthSpace.depthImage));
+        int index = y * captureInstance->depthSpace.width + x;
+        depth = depthBuffer[index];
+    }
+
+    k4a_float2_t pointK4APoint = {static_cast<float>(x), static_cast<float>(y)};
+    k4a_float3_t cameraPoint;
+    int valid;
+    if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &pointK4APoint, depth, source_type, K4A_CALIBRATION_TYPE_COLOR, &cameraPoint, &valid))
+    {
+        // std::cout << "Failed to convert from 2d to 3d" << std::endl;
+        // exit(EXIT_FAILURE);
+    }
+
+    if (!valid)
+    {
+        // std::cout << "Failed to convert to valid 3d coords" << std::endl;
+        // exit(EXIT_FAILURE);
+    }
+    return glm::vec3((-(float)cameraPoint.xyz.x) / 10.0, -((float)cameraPoint.xyz.y) / 10.0, ((float)cameraPoint.xyz.z) / 10.0);
+}
+
+std::vector<glm::vec3> Tracker::getPointCloud()
+{
+    std::vector<glm::vec3> pointCloud;
+    if ((captureInstance == nullptr) || (captureInstance->depthSpace.depthImage == NULL))
     {
         return pointCloud;
     }
-    if (captureInstance->dDepthImage == NULL)
-    {
-        return pointCloud;
-    }
-    int height = k4a_image_get_height_pixels(captureInstance->dDepthImage);
-    int width = k4a_image_get_width_pixels(captureInstance->dDepthImage);
 
-    // Get the depth image buffer
-    uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->dDepthImage));
-
-    for (int y = 0; y < height; y++)
+    for (int y = 0; y < captureInstance->depthSpace.height; y++)
     {
-        for (int x = 0; x < width; x++)
+        for (int x = 0; x < captureInstance->depthSpace.width; x++)
         {
-            // Calculate the index for the current (x, y) pixel
-            int index = y * width + x;
-
-            // Access the depth value at (x, y)
-            uint16_t depth = depthBuffer[index];
-
-            k4a_float2_t k4a_point = {static_cast<float>(x), static_cast<float>(y)};
-            k4a_float3_t camera_point;
-            int valid;
-            if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &k4a_point, depth, K4A_CALIBRATION_TYPE_DEPTH, K4A_CALIBRATION_TYPE_COLOR, &camera_point, &valid))
-            {
-                // std::cout << "Failed to convert from 2d to 3d" << std::endl;
-                continue;
-            }
-
-            if (!valid)
-            {
-                // std::cout << "Failed to convert to valid 3d coords" << std::endl;
-                continue;
-            }
-            pointCloud.push_back(cv::Point3d(camera_point.xyz.x / 10.0, camera_point.xyz.y / 10.0, camera_point.xyz.z / 10.0));
+            pointCloud.push_back(calculate3DPos(x, y, K4A_CALIBRATION_TYPE_DEPTH));
         }
     }
 
@@ -172,7 +176,7 @@ void Tracker::update()
 
         // Directly upload BGRA image to GPU and convert to BGR
         cv::cuda::GpuMat bgraImageGpu, bgrImageGpu;
-        cv::Mat bgraImage(k4a_image_get_height_pixels(captureInstance->cColorImage), k4a_image_get_width_pixels(captureInstance->cColorImage), CV_8UC4, k4a_image_get_buffer(captureInstance->cColorImage), (size_t)k4a_image_get_stride_bytes(captureInstance->cColorImage));
+        cv::Mat bgraImage(captureInstance->colorSpace.height, captureInstance->colorSpace.width, CV_8UC4, k4a_image_get_buffer(captureInstance->colorSpace.colorImage), (size_t)k4a_image_get_stride_bytes(captureInstance->colorSpace.colorImage));
         bgraImageGpu.upload(bgraImage);
         cv::cuda::cvtColor(bgraImageGpu, bgrImageGpu, cv::COLOR_BGRA2BGR);
 
@@ -190,7 +194,7 @@ void Tracker::update()
         dlib::assign_image(dlib_matrix, dlib_img);
         batch.push_back(dlib_matrix);
 
-        cv::Mat dImage(k4a_image_get_height_pixels(captureInstance->cDepthImage), k4a_image_get_width_pixels(captureInstance->cDepthImage), CV_16U, k4a_image_get_buffer(captureInstance->cDepthImage), (size_t)k4a_image_get_stride_bytes(captureInstance->cDepthImage));
+        cv::Mat dImage(captureInstance->colorSpace.height, captureInstance->colorSpace.width, CV_16U, k4a_image_get_buffer(captureInstance->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(captureInstance->colorSpace.depthImage));
 
         cv::Mat normalisedDImage, colorDepthImage;
         cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
@@ -230,8 +234,8 @@ void Tracker::update()
                 landmarks[i].part(2).y() + landmarks[i].part(3).y()));
 
             // Left eye
-            leftEyePos = calculateEyePos(eyes[0], dImage);
-            rightEyePos = calculateEyePos(eyes[1], dImage);
+            leftEyePos = calculate3DPos(eyes[0].x, eyes[0].y, K4A_CALIBRATION_TYPE_COLOR);
+            rightEyePos = calculate3DPos(eyes[1].x, eyes[1].y, K4A_CALIBRATION_TYPE_COLOR);
         }
 
         // Draw Detected faces on output
@@ -256,26 +260,6 @@ void Tracker::update()
     {
         throw;
     }
-}
-
-glm::vec3 Tracker::calculateEyePos(cv::Point eye, cv::Mat dImage)
-{
-    ushort eyeDepthLeft = dImage.at<ushort>(eye.y, eye.x);
-    k4a_float2_t eyeK4APointLeft = {static_cast<float>(eye.x), static_cast<float>(eye.y)};
-    k4a_float3_t cameraPointLeft;
-    int valid;
-    if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &eyeK4APointLeft, eyeDepthLeft, K4A_CALIBRATION_TYPE_COLOR, K4A_CALIBRATION_TYPE_COLOR, &cameraPointLeft, &valid))
-    {
-        std::cout << "Failed to convert from 2d to 3d" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if (!valid)
-    {
-        std::cout << "Failed to convert to valid 3d coords" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return glm::vec3((-(float)cameraPointLeft.xyz.x) / 10.0, -((float)cameraPointLeft.xyz.y) / 10.0, ((float)cameraPointLeft.xyz.z) / 10.0);
 }
 
 glm::vec3 Tracker::getLeftEyePos()
@@ -344,21 +328,25 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
         throw CaptureReadFailedException();
     }
 
-    cColorImage = k4a_capture_get_color_image(capture);
-    dDepthImage = k4a_capture_get_depth_image(capture);
-    if (K4A_RESULT_FAILED == k4a_image_create(K4A_IMAGE_FORMAT_DEPTH16, k4a_image_get_width_pixels(cColorImage), k4a_image_get_height_pixels(cColorImage), k4a_image_get_width_pixels(cColorImage) * (int)sizeof(uint16_t), &cDepthImage))
+    colorSpace.colorImage = k4a_capture_get_color_image(capture);
+    colorSpace.width = k4a_image_get_width_pixels(colorSpace.colorImage);
+    colorSpace.height = k4a_image_get_height_pixels(colorSpace.colorImage);
+    depthSpace.depthImage = k4a_capture_get_depth_image(capture);
+    depthSpace.width = k4a_image_get_width_pixels(depthSpace.depthImage);
+    depthSpace.height = k4a_image_get_height_pixels(depthSpace.depthImage);
+    if (K4A_RESULT_FAILED == k4a_image_create(K4A_IMAGE_FORMAT_DEPTH16, colorSpace.width, colorSpace.height, colorSpace.width * (int)sizeof(uint16_t), &colorSpace.depthImage))
     {
-        k4a_image_release(cColorImage);
-        k4a_image_release(dDepthImage);
+        k4a_image_release(colorSpace.colorImage);
+        k4a_image_release(depthSpace.depthImage);
         k4a_capture_release(capture);
         std::cout << "Failed to create empty transformed_depth_image" << std::endl;
         exit(EXIT_FAILURE);
     }
-    if (K4A_RESULT_FAILED == k4a_transformation_depth_image_to_color_camera(transformation, dDepthImage, cDepthImage))
+    if (K4A_RESULT_FAILED == k4a_transformation_depth_image_to_color_camera(transformation, depthSpace.depthImage, colorSpace.depthImage))
     {
-        k4a_image_release(cColorImage);
-        k4a_image_release(cDepthImage);
-        k4a_image_release(dDepthImage);
+        k4a_image_release(colorSpace.colorImage);
+        k4a_image_release(colorSpace.depthImage);
+        k4a_image_release(depthSpace.depthImage);
         k4a_capture_release(capture);
         std::cout << "Failed to create transformed_depth_image" << std::endl;
         exit(EXIT_FAILURE);
@@ -367,7 +355,7 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
 
 Tracker::Capture::~Capture()
 {
-    k4a_image_release(cColorImage);
-    k4a_image_release(cDepthImage);
-    k4a_image_release(dDepthImage);
+    k4a_image_release(colorSpace.colorImage);
+    k4a_image_release(colorSpace.depthImage);
+    k4a_image_release(depthSpace.depthImage);
 }
