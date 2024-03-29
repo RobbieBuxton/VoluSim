@@ -149,7 +149,8 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
     return glm::vec3((-(float)cameraPoint.xyz.x) / 10.0, -((float)cameraPoint.xyz.y) / 10.0, ((float)cameraPoint.xyz.z) / 10.0);
 }
 
-std::vector<glm::vec3> Tracker::getPointCloud()
+
+std::vector<glm::vec3> Tracker::getPointCloudOld()
 {
     std::vector<glm::vec3> pointCloud;
     if ((captureInstance == nullptr) || (captureInstance->depthSpace.depthImage == NULL))
@@ -164,6 +165,42 @@ std::vector<glm::vec3> Tracker::getPointCloud()
             pointCloud.push_back(calculate3DPos(x, y, K4A_CALIBRATION_TYPE_DEPTH));
         }
     }
+
+    return pointCloud;
+}
+
+std::vector<glm::vec3> Tracker::getPointCloud()
+{
+    std::vector<glm::vec3> pointCloud;
+    if ((captureInstance == nullptr) || (captureInstance->depthSpace.depthImage == NULL))
+    {
+        return pointCloud;
+    }
+    k4a_image_t pointCloudImage;
+
+    // Create an image to hold the point cloud data
+    k4a_image_create(K4A_IMAGE_FORMAT_CUSTOM,
+                     captureInstance->depthSpace.width,
+                     captureInstance->depthSpace.height,
+                     captureInstance->depthSpace.width * 3 * (int)sizeof(int16_t),
+                     &pointCloudImage);
+
+    // Transform the depth image to a point cloud
+    k4a_transformation_depth_image_to_point_cloud(transformation, captureInstance->depthSpace.depthImage, K4A_CALIBRATION_TYPE_DEPTH, pointCloudImage);
+
+    // Convert pointCloudImage to std::vector<glm::vec3>
+    int16_t* pointCloudData = reinterpret_cast<int16_t*>(k4a_image_get_buffer(pointCloudImage));
+    for (int i = 0; i < captureInstance->depthSpace.width * captureInstance->depthSpace.height; ++i)
+    {
+        int index = i * 3;
+        float x = -static_cast<float>(pointCloudData[index]) / 10.0f;
+        float y = -static_cast<float>(pointCloudData[index + 1]) / 10.0f;
+        float z = static_cast<float>(pointCloudData[index + 2]) / 10.0f;
+        pointCloud.push_back(glm::vec3(x, y, z));
+    }
+
+    // Remember to release the point cloud image after use
+    k4a_image_release(pointCloudImage);
 
     return pointCloud;
 }
