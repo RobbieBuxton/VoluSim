@@ -39,7 +39,6 @@ class Model
         // std::string directory;
 
         void loadObjFile(const std::string& objPath);
-      
 };
 
 

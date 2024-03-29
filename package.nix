@@ -12,14 +12,12 @@
       python310Packages.glad2
       bzip2
       glxinfo
+      # breakpointHook # Should look into getting this working
     ];
 
     buildInputs = with pkgs; [
       dlib
       opencv
-      cudatoolkit
-      cudaPackages.cudnn
-      linuxPackages.nvidia_x11
       glfw
       glm
       stb
@@ -31,6 +29,14 @@
     ] ++ (with k4apkgs; [
       libk4a-dev
       k4a-tools
+    ]) 
+    ++ (with cudaPackages; [
+      cudnn
+      cuda_nvcc
+      cuda_cudart
+      libcublas
+      libcurand
+      libcusolver
     ]);
 
     configurePhase =
@@ -72,6 +78,8 @@
           "src/tracker.cpp"
           "src/model.cpp"
           "src/mesh.cpp"
+          "src/image.cpp"
+          "src/pointcloud.cpp"
           "${gladBuildDir}/src/gl.c"
         ];
         libs = [
@@ -94,10 +102,10 @@
           "-lopencv_cudafilters"
           "-lopencv_cudawarping"
           "-lopencv_features2d"
+          "-lopencv_cudaimgproc"
           "-lopencv_flann"
           "-ldlib"
           "-lcudart"
-          "-lcuda"
           "-lcudnn"
           "-lcublas"
           "-lcurand"
