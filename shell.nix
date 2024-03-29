@@ -9,6 +9,7 @@ pkgs.mkShell rec {
     glxinfo
     killall
     jq
+    cntr #For debugging in theory
   ] ++ (with k4apkgs; [
     k4a-tools
   ]);

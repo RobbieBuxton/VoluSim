@@ -48,12 +48,13 @@ int main()
     GLfloat dDepth = 39.5f;
     GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
     GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
-    Display Display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, pixelScaledHeight, 0.01f, 1000.0f);
+    Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, pixelScaledHeight, 0.01f, 1000.0f);
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>();
 
     Model room("data/resources/models/room.obj");
     Model chessSet("data/resources/models/chessSet.obj");
+    Model cube("data/resources/models/cube.obj");
 
     std::cout << "Finished Load" << std::endl;
 
@@ -62,7 +63,7 @@ int main()
 
     // render loop
     // -----------
-    PointCloud points = PointCloud();
+    PointCloud pointCloud = PointCloud();
     Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
     Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
     Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
@@ -108,13 +109,13 @@ int main()
         // activate shader
         modelShader.use();
 
-        modelShader.setMat4("projection", Display.projectionToEye(currentEyePos));
+        modelShader.setMat4("projection", display.projectionToEye(currentEyePos));
         modelShader.setVec3("viewPos", currentEyePos);
-        modelShader.setVec3("lightPos", glm::vec3(0.0f, Display.height, 80.0f));
+        modelShader.setVec3("lightPos", glm::vec3(0.0f, display.height, 80.0f));
         modelShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
-        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(Display.width, Display.height, Display.depth));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, Display.height / 2.0, -Display.depth / 2.0));
+        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(display.width, display.height, display.depth));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, display.height / 2.0, -display.depth / 2.0));
         model = translationMatrix * scaleMatrix;
         modelShader.setMat4("model", model);
         modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
@@ -123,7 +124,7 @@ int main()
 
         centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
         scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, Display.height / 3.0, 0));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, display.height / 3.0, 0));
         model = translationMatrix * scaleMatrix * centeringMatrix;
         modelShader.setMat4("model", model);
         modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
@@ -138,8 +139,9 @@ int main()
         {
             depthCamera.updateImage(trackerPtr->getDepthImage());
         }
-        points.updateCloud(trackerPtr->getPointCloud());
-
+        pointCloud.updateCloud(trackerPtr->getPointCloud());
+        pointCloud.drawWith(cube, modelShader, display);
+        
         debugInfo.displayImage();
         colourCamera.displayImage();
         depthCamera.displayImage();
@@ -151,7 +153,7 @@ int main()
 
     std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
 
-    points.save(miscPath + "pointCloud.csv");
+    pointCloud.save(miscPath + "pointCloud.csv");
     colourCamera.save(miscPath + "colourImage.png");
     depthCamera.save(miscPath + "depthImage.png");
     saveVec3ToCSV(trackerPtr->getLeftEyePos(), miscPath + "leftEyePos.csv");
