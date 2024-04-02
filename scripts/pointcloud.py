@@ -40,6 +40,8 @@ def visualize_point_cloud_pyvista(file_path, left_eye_path, right_eye_path, z_mi
     plotter.camera.position = (0, 0, -1)  # Position the camera in front of the point cloud
     plotter.camera.roll = 180  # Adjust if necessary to orient the view correctly
     
+    plotter.add_axes(interactive=False, line_width=2, labels_off=False)
+
     plotter.show()
 
 # Usage example

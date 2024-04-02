@@ -135,7 +135,7 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
     k4a_float2_t pointK4APoint = {static_cast<float>(x), static_cast<float>(y)};
     k4a_float3_t cameraPoint;
     int valid;
-    if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &pointK4APoint, depth, source_type, K4A_CALIBRATION_TYPE_COLOR, &cameraPoint, &valid))
+    if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &pointK4APoint, depth, source_type, K4A_CALIBRATION_TYPE_DEPTH, &cameraPoint, &valid))
     {
         // std::cout << "Failed to convert from 2d to 3d" << std::endl;
         // exit(EXIT_FAILURE);
