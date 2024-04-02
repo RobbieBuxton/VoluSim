@@ -149,26 +149,6 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
     return glm::vec3((-(float)cameraPoint.xyz.x) / 10.0, -((float)cameraPoint.xyz.y) / 10.0, ((float)cameraPoint.xyz.z) / 10.0);
 }
 
-
-std::vector<glm::vec3> Tracker::getPointCloudOld()
-{
-    std::vector<glm::vec3> pointCloud;
-    if ((captureInstance == nullptr) || (captureInstance->depthSpace.depthImage == NULL))
-    {
-        return pointCloud;
-    }
-
-    for (int y = 0; y < captureInstance->depthSpace.height; y++)
-    {
-        for (int x = 0; x < captureInstance->depthSpace.width; x++)
-        {
-            pointCloud.push_back(calculate3DPos(x, y, K4A_CALIBRATION_TYPE_DEPTH));
-        }
-    }
-
-    return pointCloud;
-}
-
 std::vector<glm::vec3> Tracker::getPointCloud()
 {
     std::vector<glm::vec3> pointCloud;

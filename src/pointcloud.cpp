@@ -9,7 +9,7 @@ PointCloud::PointCloud()
 };
 
 
-void PointCloud::drawWith(Model model, Shader shader, Display display)
+void PointCloud::drawWith(Model model, Shader shader, glm::vec3 cameraOffset, glm::vec3 currentEyePos)
 {
     glm::mat4 modelMatrix, scaleMatrix, translationMatrix, centeringMatrix;
     centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
@@ -18,11 +18,14 @@ void PointCloud::drawWith(Model model, Shader shader, Display display)
 
     for (const auto& point : points)
     {
-        glm::vec3 pointTranslation = point + glm::vec3(0.0, 0.0, 0.0f);
-        translationMatrix = glm::translate(glm::mat4(1.0f), pointTranslation);
-        modelMatrix = translationMatrix * scaleMatrix * centeringMatrix;
-        shader.setMat4("model", modelMatrix);
-        model.Draw(shader);
+        if (point.z < currentEyePos.z)
+        {
+            glm::vec3 pointTranslation = point + cameraOffset;
+            translationMatrix = glm::translate(glm::mat4(1.0f), pointTranslation);
+            modelMatrix = translationMatrix * scaleMatrix * centeringMatrix;
+            shader.setMat4("model", modelMatrix);
+            model.Draw(shader);
+        }
     }
 }
 

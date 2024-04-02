@@ -16,7 +16,7 @@ public:
     ~PointCloud();
     void updateCloud(std::vector<glm::vec3> points);
     void save(const std::string& filename);
-    void drawWith(Model model, Shader shader, Display display);
+    void drawWith(Model model, Shader shader, glm::vec3 cameraOffset, glm::vec3 currentEyePos);
 private:
     std::vector<glm::vec3> points;
 };

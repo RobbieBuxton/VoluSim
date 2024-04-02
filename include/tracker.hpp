@@ -32,7 +32,6 @@ public:
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
     std::vector<glm::vec3> getPointCloud();
-    std::vector<glm::vec3> getPointCloudOld();
 
 private:
     glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
