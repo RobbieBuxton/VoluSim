@@ -50,7 +50,7 @@ int main()
     GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
     Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, pixelScaledHeight, 1.0f, 1000.0f);
 
-    std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>();
+    std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(30.0f);
 
     Model room("data/resources/models/room.obj");
     Model chessSet("data/resources/models/chessSet.obj");
@@ -58,7 +58,7 @@ int main()
 
     std::cout << "Finished Load" << std::endl;
 
-    glm::vec3 cameraOffset = glm::vec3(0.0f, dHeight, -6.0f);
+    glm::vec3 cameraOffset = glm::vec3(0.0f, dHeight, 3.0f);
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 
     // render loop

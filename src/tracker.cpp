@@ -62,7 +62,8 @@ public:
     FailedToDetectFaceException() : TrackerException("Could not detect face from capture") {}
 };
 
-Tracker::Tracker()
+
+Tracker::Tracker(float yRot)
 {
     // Check for Trackers
     uint32_t count = k4a_device_get_installed_count();
@@ -113,6 +114,9 @@ Tracker::Tracker()
 
         // Head distance 50cm
         leftEyePos = glm::vec3(0.0f, 0.0f, 50.0f);
+
+        //Rotation into the same basis as screenSpace
+        toScreenSpaceMat = glm::rotate(glm::mat4(1.0f), glm::radians(yRot), glm::vec3(1.0f, 0.0f, 0.0f));
     }
 }
 
@@ -176,7 +180,7 @@ std::vector<glm::vec3> Tracker::getPointCloud()
         float x = -static_cast<float>(pointCloudData[index]) / 10.0f;
         float y = -static_cast<float>(pointCloudData[index + 1]) / 10.0f;
         float z = static_cast<float>(pointCloudData[index + 2]) / 10.0f;
-        pointCloud.push_back(glm::vec3(x, y, z));
+        pointCloud.push_back(toScreenSpace(glm::vec3(x, y, z)));
     }
 
     // Remember to release the point cloud image after use
@@ -281,12 +285,12 @@ void Tracker::update()
 
 glm::vec3 Tracker::getLeftEyePos()
 {
-    return leftEyePos;
+    return toScreenSpace(leftEyePos);
 }
 
 glm::vec3 Tracker::getRightEyePos()
 {
-    return rightEyePos;
+    return toScreenSpace(leftEyePos);
 }
 
 cv::Mat Tracker::getDepthImage()
@@ -368,6 +372,11 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
         std::cout << "Failed to create transformed_depth_image" << std::endl;
         exit(EXIT_FAILURE);
     }
+}
+
+glm::vec3 Tracker::toScreenSpace(glm::vec3 pos)
+{
+    return glm::vec3(toScreenSpaceMat * glm::vec4(pos, 1.0f));
 }
 
 Tracker::Capture::~Capture()
