@@ -135,7 +135,7 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
     k4a_float2_t pointK4APoint = {static_cast<float>(x), static_cast<float>(y)};
     k4a_float3_t cameraPoint;
     int valid;
-    if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &pointK4APoint, depth, source_type, K4A_CALIBRATION_TYPE_COLOR, &cameraPoint, &valid))
+    if (K4A_RESULT_SUCCEEDED != k4a_calibration_2d_to_3d(&calibration, &pointK4APoint, depth, source_type, K4A_CALIBRATION_TYPE_DEPTH, &cameraPoint, &valid))
     {
         // std::cout << "Failed to convert from 2d to 3d" << std::endl;
         // exit(EXIT_FAILURE);
@@ -156,14 +156,31 @@ std::vector<glm::vec3> Tracker::getPointCloud()
     {
         return pointCloud;
     }
+    k4a_image_t pointCloudImage;
 
-    for (int y = 0; y < captureInstance->depthSpace.height; y++)
+    // Create an image to hold the point cloud data
+    k4a_image_create(K4A_IMAGE_FORMAT_CUSTOM,
+                     captureInstance->depthSpace.width,
+                     captureInstance->depthSpace.height,
+                     captureInstance->depthSpace.width * 3 * (int)sizeof(int16_t),
+                     &pointCloudImage);
+
+    // Transform the depth image to a point cloud
+    k4a_transformation_depth_image_to_point_cloud(transformation, captureInstance->depthSpace.depthImage, K4A_CALIBRATION_TYPE_DEPTH, pointCloudImage);
+
+    // Convert pointCloudImage to std::vector<glm::vec3>
+    int16_t* pointCloudData = reinterpret_cast<int16_t*>(k4a_image_get_buffer(pointCloudImage));
+    for (int i = 0; i < captureInstance->depthSpace.width * captureInstance->depthSpace.height; ++i)
     {
-        for (int x = 0; x < captureInstance->depthSpace.width; x++)
-        {
-            pointCloud.push_back(calculate3DPos(x, y, K4A_CALIBRATION_TYPE_DEPTH));
-        }
+        int index = i * 3;
+        float x = -static_cast<float>(pointCloudData[index]) / 10.0f;
+        float y = -static_cast<float>(pointCloudData[index + 1]) / 10.0f;
+        float z = static_cast<float>(pointCloudData[index + 2]) / 10.0f;
+        pointCloud.push_back(glm::vec3(x, y, z));
     }
+
+    // Remember to release the point cloud image after use
+    k4a_image_release(pointCloudImage);
 
     return pointCloud;
 }
