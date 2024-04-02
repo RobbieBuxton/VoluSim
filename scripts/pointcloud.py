@@ -4,7 +4,7 @@ import numpy as np
 def load_eye_position(file_path):
     return np.loadtxt(file_path, delimiter=',', skiprows=0)
 
-def visualize_point_cloud_pyvista(file_path, left_eye_path, right_eye_path, z_min=0, z_max=500, distance_threshold=100):
+def visualize_point_cloud_pyvista(file_path, left_eye_path, right_eye_path, z_min=0, z_max=500, distance_threshold=1000):
     data = np.loadtxt(file_path, delimiter=',', skiprows=1)
     
     left_eye_pos = load_eye_position(left_eye_path)
@@ -27,13 +27,12 @@ def visualize_point_cloud_pyvista(file_path, left_eye_path, right_eye_path, z_mi
     
     eye_positions = np.vstack([left_eye_pos, right_eye_pos])
     eye_cloud = pv.PolyData(eye_positions)
-    plotter.add_points(eye_cloud, color="red", point_size=5)
+    plotter.add_points(eye_cloud, color="orange", point_size=5)
     
     plotter.view_xy()
     plotter.camera.position = (0, 0, -1)
-    plotter.camera.roll = 180
     
-    plotter.add_axes(interactive=False, line_width=2, labels_off=False)
+    plotter.add_axes(interactive=False, line_width=5, labels_off=False)
 
     plotter.show()
 

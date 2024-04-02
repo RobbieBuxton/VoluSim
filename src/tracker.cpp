@@ -290,7 +290,7 @@ glm::vec3 Tracker::getLeftEyePos()
 
 glm::vec3 Tracker::getRightEyePos()
 {
-    return toScreenSpace(leftEyePos);
+    return toScreenSpace(rightEyePos);
 }
 
 cv::Mat Tracker::getDepthImage()
