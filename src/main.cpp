@@ -1,6 +1,8 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
+#include "mediapipe.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -140,11 +142,10 @@ int main()
             depthCamera.updateImage(trackerPtr->getDepthImage());
         }
 
-
         pointCloud.updateCloud(trackerPtr->getPointCloud());
 
         pointCloud.drawWith(cube, modelShader, cameraOffset, currentEyePos);
-        
+
         debugInfo.displayImage();
         colourCamera.displayImage();
         depthCamera.displayImage();
@@ -168,15 +169,19 @@ int main()
     return 0;
 }
 
-//This should be refactored/removed/done properly
-void saveVec3ToCSV(const glm::vec3& vec, const std::string& filename) {
-    std::ofstream file(filename); 
+// This should be refactored/removed/done properly
+void saveVec3ToCSV(const glm::vec3 &vec, const std::string &filename)
+{
+    std::ofstream file(filename);
 
-    if (file.is_open()) {
+    if (file.is_open())
+    {
         // Write the glm::vec3 components to the file separated by commas
         file << vec.x << "," << vec.y << "," << vec.z << std::endl;
         file.close();
-    } else {
+    }
+    else
+    {
         // Handle error
         std::cerr << "Unable to open file: " << filename << std::endl;
     }

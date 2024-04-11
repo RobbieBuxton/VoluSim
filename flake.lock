@@ -18,6 +18,24 @@
         "type": "github"
       }
     },
+    "libmediapipe": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1712761187,
+        "narHash": "sha256-pv02HtstVclNP6TYov1Zg83d2QSyw3/ULTZGILuuNlU=",
+        "owner": "RobbieBuxton",
+        "repo": "libmediapipe-nix",
+        "rev": "ac159db9b7296e4d3caf2e12a43a47955a381132",
+        "type": "github"
+      },
+      "original": {
+        "owner": "RobbieBuxton",
+        "repo": "libmediapipe-nix",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1685566663,
@@ -36,6 +54,22 @@
     },
     "nixpkgs_2": {
       "locked": {
+        "lastModified": 1712168706,
+        "narHash": "sha256-XP24tOobf6GGElMd0ux90FEBalUtw6NkBSVh/RlA6ik=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "1487bdea619e4a7a53a4590c475deabb5a9d1bfb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-23.11",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
         "lastModified": 1701282334,
         "narHash": "sha256-MxCVrXY6v4QmfTwIysjjaX0XUhqBbxTWWB4HXtDYsdk=",
         "owner": "NixOS",
@@ -53,7 +87,8 @@
     "root": {
       "inputs": {
         "k4a": "k4a",
-        "nixpkgs": "nixpkgs_2"
+        "libmediapipe": "libmediapipe",
+        "nixpkgs": "nixpkgs_3"
       }
     }
   },
