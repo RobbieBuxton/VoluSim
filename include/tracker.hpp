@@ -44,7 +44,6 @@ const mp_hand_landmark CONNECTIONS[][2] = {
     {mp_hand_landmark_pinky_pip, mp_hand_landmark_pinky_dip},
     {mp_hand_landmark_pinky_dip, mp_hand_landmark_pinky_tip}};
 
-
 #define CHECK_MP_RESULT(result)                            \
     if (!result)                                           \
     {                                                      \
@@ -68,7 +67,9 @@ public:
     std::vector<glm::vec3> getPointCloud();
 
 private:
-    void trackHand(cv::Mat colorImage);
+
+    void createNewTrackingFrame(cv::Mat colorImage);
+    void debugDraw(cv::Mat colorImage);
     glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
     glm::vec3 toScreenSpace(glm::vec3 pos);
     k4a_device_t device;
@@ -76,13 +77,12 @@ private:
     k4a_calibration_t calibration;
     k4a_transformation_t transformation;
 
-    glm::vec3 leftEyePos;
-    glm::vec3 rightEyePos;
-    glm::mat4 toScreenSpaceMat; 
+    glm::mat4 toScreenSpaceMat;
     net_type cnn_face_detector;
 
     dlib::shape_predictor predictor;
 
+   
     cv::Mat colorImage;
     cv::Mat depthImage;
 
@@ -108,11 +108,26 @@ private:
         ImageSpace colorSpace;
         // depth/ir coord space
         ImageSpace depthSpace;
+
     private:
         k4a_capture_t capture = NULL;
         int32_t timeout = 17;
     };
 
+    class TrackingFrame
+    {
+    public:
+        ~TrackingFrame();
+        std::vector<dlib::rectangle> faces;
+        std::vector<dlib::full_object_detection> faceLandmarks;
+        mp_multi_face_landmark_list *handLandmarks;
+        mp_rect_list *rects;
+        glm::vec3 leftEyePos;
+        glm::vec3 rightEyePos;
+    };
+
+
+    std::unique_ptr<TrackingFrame> trackingFrame;
     std::unique_ptr<Capture> captureInstance;
 };
 
