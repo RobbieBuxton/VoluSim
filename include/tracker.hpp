@@ -44,6 +44,16 @@ const mp_hand_landmark CONNECTIONS[][2] = {
     {mp_hand_landmark_pinky_pip, mp_hand_landmark_pinky_dip},
     {mp_hand_landmark_pinky_dip, mp_hand_landmark_pinky_tip}};
 
+
+#define CHECK_MP_RESULT(result)                            \
+    if (!result)                                           \
+    {                                                      \
+        const char *error = mp_get_last_error();           \
+        std::cerr << "[MediaPipe] " << error << std::endl; \
+        mp_free_error(error);                              \
+        std::exit(1);                                      \
+    }
+
 class Tracker
 {
 public:

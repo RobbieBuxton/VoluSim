@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <exception>
+#include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
 
@@ -63,16 +64,6 @@ public:
     FailedToDetectFaceException() : TrackerException("Could not detect face from capture") {}
 };
 
-#define CHECK_MP_RESULT(result)                            \
-    if (!result)                                           \
-    {                                                      \
-        const char *error = mp_get_last_error();           \
-        std::cerr << "[MediaPipe] " << error << std::endl; \
-        mp_free_error(error);                              \
-        std::exit(1);                                      \
-    }
-
-
 Tracker::Tracker(float yRot)
 {
     // Check for Trackers
@@ -81,83 +72,81 @@ Tracker::Tracker(float yRot)
     {
         throw NoTrackersDetectedException();
     }
-    else
+
+    std::cout << "k4a device attached!" << std::endl;
+
+    // Open the first plugged in Tracker device
+    device = NULL;
+    if (K4A_FAILED(k4a_device_open(K4A_DEVICE_DEFAULT, &device)))
     {
-        std::cout << "k4a device attached!" << std::endl;
-
-        // Open the first plugged in Tracker device
-        device = NULL;
-        if (K4A_FAILED(k4a_device_open(K4A_DEVICE_DEFAULT, &device)))
-        {
-            throw FailedToOpenTrackerException();
-        }
-
-        // Get the size of the serial number
-        size_t serial_size = 0;
-        k4a_device_get_serialnum(device, NULL, &serial_size);
-
-        // Allocate memory for the serial, then acquire it
-        char *serial = (char *)(malloc(serial_size));
-        k4a_device_get_serialnum(device, serial, &serial_size);
-        printf("Opened device: %s\n", serial);
-        free(serial);
-
-        config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-        config.camera_fps = K4A_FRAMES_PER_SECOND_30;
-        config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-        config.color_resolution = K4A_COLOR_RESOLUTION_1080P;
-        config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
-        config.synchronized_images_only = true;
-
-        if (K4A_RESULT_SUCCEEDED != k4a_device_start_cameras(device, &config))
-        {
-            k4a_device_close(device);
-            throw FailedToStartTrackerException();
-        }
-
-        // Display the color image
-        k4a_device_get_calibration(device, config.depth_mode, config.color_resolution, &calibration);
-        transformation = k4a_transformation_create(&calibration);
-
-        dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
-        dlib::deserialize(FileSystem::getPath("data/mmod_human_face_detector.dat").c_str()) >> cnn_face_detector;
-
-        // configure mediapipe
-        std::string srcPath = FileSystem::getPath("data/");
-        std::string landmarkPath = FileSystem::getPath("data/mediapipe/modules/hand_landmark/hand_landmark_tracking_cpu.binarypb");
-        mp_set_resource_dir(srcPath.c_str());
-
-        // Load the binary graph and specify the input stream name.
-        mp_instance_builder *builder = mp_create_instance_builder(landmarkPath.c_str(), "image");
-
-        // Configure the graph with node options and side packets.
-        mp_add_option_float(builder, "palmdetectioncpu__TensorsToDetectionsCalculator", "min_score_thresh", 0.6);
-        mp_add_option_double(builder, "handlandmarkcpu__ThresholdingCalculator", "threshold", 0.2);
-        mp_add_side_packet(builder, "num_hands", mp_create_packet_int(2));
-        mp_add_side_packet(builder, "model_complexity", mp_create_packet_int(1));
-        mp_add_side_packet(builder, "use_prev_landmarks", mp_create_packet_bool(true));
-
-        // Create an instance from the instance builder.
-        instance = mp_create_instance(builder);
-        CHECK_MP_RESULT(instance)
-
-        // Create poller for the hand landmarks.
-        landmarks_poller = mp_create_poller(instance, "multi_hand_landmarks");
-        CHECK_MP_RESULT(landmarks_poller)
-
-        // Create a poller for the hand rectangles.
-        rects_poller = mp_create_poller(instance, "hand_rects");
-        CHECK_MP_RESULT(rects_poller)
-
-        // Start the graph.
-        CHECK_MP_RESULT(mp_start(instance))
-
-        // Head distance 50cm
-        leftEyePos = glm::vec3(0.0f, 0.0f, 50.0f);
-
-        // Rotation into the same basis as screenSpace
-        toScreenSpaceMat = glm::rotate(glm::mat4(1.0f), glm::radians(yRot), glm::vec3(1.0f, 0.0f, 0.0f));
+        throw FailedToOpenTrackerException();
     }
+
+    // Get the size of the serial number
+    size_t serial_size = 0;
+    k4a_device_get_serialnum(device, NULL, &serial_size);
+
+    // Allocate memory for the serial, then acquire it
+    char *serial = (char *)(malloc(serial_size));
+    k4a_device_get_serialnum(device, serial, &serial_size);
+    printf("Opened device: %s\n", serial);
+    free(serial);
+
+    config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+    config.camera_fps = K4A_FRAMES_PER_SECOND_30;
+    config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
+    config.color_resolution = K4A_COLOR_RESOLUTION_1080P;
+    config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
+    config.synchronized_images_only = true;
+
+    if (K4A_RESULT_SUCCEEDED != k4a_device_start_cameras(device, &config))
+    {
+        k4a_device_close(device);
+        throw FailedToStartTrackerException();
+    }
+
+    // Display the color image
+    k4a_device_get_calibration(device, config.depth_mode, config.color_resolution, &calibration);
+    transformation = k4a_transformation_create(&calibration);
+
+    dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
+    dlib::deserialize(FileSystem::getPath("data/mmod_human_face_detector.dat").c_str()) >> cnn_face_detector;
+
+    // configure mediapipe
+    std::string srcPath = FileSystem::getPath("data/");
+    std::string landmarkPath = FileSystem::getPath("data/mediapipe/modules/hand_landmark/hand_landmark_tracking_cpu.binarypb");
+    mp_set_resource_dir(srcPath.c_str());
+
+    // Load the binary graph and specify the input stream name.
+    mp_instance_builder *builder = mp_create_instance_builder(landmarkPath.c_str(), "image");
+
+    // Configure the graph with node options and side packets.
+    mp_add_option_float(builder, "palmdetectioncpu__TensorsToDetectionsCalculator", "min_score_thresh", 0.6);
+    mp_add_option_double(builder, "handlandmarkcpu__ThresholdingCalculator", "threshold", 0.2);
+    mp_add_side_packet(builder, "num_hands", mp_create_packet_int(2));
+    mp_add_side_packet(builder, "model_complexity", mp_create_packet_int(1));
+    mp_add_side_packet(builder, "use_prev_landmarks", mp_create_packet_bool(true));
+
+    // Create an instance from the instance builder.
+    instance = mp_create_instance(builder);
+    CHECK_MP_RESULT(instance)
+
+    // Create poller for the hand landmarks.
+    landmarks_poller = mp_create_poller(instance, "multi_hand_landmarks");
+    CHECK_MP_RESULT(landmarks_poller)
+
+    // Create a poller for the hand rectangles.
+    rects_poller = mp_create_poller(instance, "hand_rects");
+    CHECK_MP_RESULT(rects_poller)
+
+    // Start the graph.
+    CHECK_MP_RESULT(mp_start(instance))
+
+    // Head distance 50cm
+    leftEyePos = glm::vec3(0.0f, 0.0f, 50.0f);
+
+    // Rotation into the same basis as screenSpace
+    toScreenSpaceMat = glm::rotate(glm::mat4(1.0f), glm::radians(yRot), glm::vec3(1.0f, 0.0f, 0.0f));
 }
 
 glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_type)
@@ -288,11 +277,20 @@ void Tracker::trackHand(cv::Mat colorImage)
     image.height = colorImage.rows;
     image.format = mp_image_format_srgb;
 
+    auto start = std::chrono::high_resolution_clock::now();
+
     // Wrap the image in a packet and process it.
     CHECK_MP_RESULT(mp_process(instance, mp_create_packet_image(image)))
 
     // Wait until the image has been processed.
     CHECK_MP_RESULT(mp_wait_until_idle(instance))
+
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    // Calculate the duration in milliseconds
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "Latency: " << duration.count() << " milliseconds" << std::endl;
 
     // Draw the hand landmarks onto the frame.
     if (mp_get_queue_size(landmarks_poller) > 0)
