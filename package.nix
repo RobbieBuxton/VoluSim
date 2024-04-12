@@ -1,4 +1,4 @@
-{ pkgs, k4apkgs, tolHeader }:
+{ pkgs, k4apkgs, tolHeader, libmediapipepkg }:
 {
   default = pkgs.cudaPackages.backendStdenv.mkDerivation {
     pname = "volumetricSim";
@@ -61,7 +61,11 @@
         bzip2 -d ./shape_predictor_5_face_landmarks.dat.bz2
         cp ${mmodHumanFaceDetectorSrc} ./mmod_human_face_detector.dat.bz2
         bzip2 -d ./mmod_human_face_detector.dat.bz2       
-        cd ..
+        cp -r ${libmediapipepkg}/data/mediapipe/ ./mediapipe
+        cd ./mediapipe/modules/hand_landmark
+        chmod +w .
+        echo -e "Left\nRight" > handedness.txt
+        cd ../../../..
       '';
 
     buildPhase =
@@ -84,6 +88,7 @@
         ];
         libs = [
           "-L ${k4apkgs.libk4a-dev}/lib/x86_64-linux-gnu"
+          "-L ${libmediapipepkg}/lib"
           "-lglfw"
           "-lGL"
           "-lX11"
@@ -111,12 +116,14 @@
           "-lcurand"
           "-lcusolver"
           "-lmkl_intel_lp64"
+          "-lmediapipe"
         ];
         headers = [
           "-I ${pkgs.dlib}/include"
           "-I ${pkgs.opencv}/include/opencv4"
           "-I ${gladBuildDir}/include"
           "-I ${k4apkgs.libk4a-dev}/include"
+          "-I ${libmediapipepkg}/include"
           "-I include"
         ];
         macros = [ ''-DPACKAGE_PATH=\"$out\"'' ];

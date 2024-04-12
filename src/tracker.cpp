@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <exception>
+#include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
 
@@ -23,6 +24,7 @@
 
 #include "tracker.hpp"
 #include "filesystem.hpp"
+#include "mediapipe.h"
 
 class TrackerException : public std::exception
 {
@@ -62,7 +64,7 @@ public:
     FailedToDetectFaceException() : TrackerException("Could not detect face from capture") {}
 };
 
-Tracker::Tracker()
+Tracker::Tracker(float yRot)
 {
     // Check for Trackers
     uint32_t count = k4a_device_get_installed_count();
@@ -70,50 +72,81 @@ Tracker::Tracker()
     {
         throw NoTrackersDetectedException();
     }
-    else
+
+    std::cout << "k4a device attached!" << std::endl;
+
+    // Open the first plugged in Tracker device
+    device = NULL;
+    if (K4A_FAILED(k4a_device_open(K4A_DEVICE_DEFAULT, &device)))
     {
-        std::cout << "k4a device attached!" << std::endl;
-
-        // Open the first plugged in Tracker device
-        device = NULL;
-        if (K4A_FAILED(k4a_device_open(K4A_DEVICE_DEFAULT, &device)))
-        {
-            throw FailedToOpenTrackerException();
-        }
-
-        // Get the size of the serial number
-        size_t serial_size = 0;
-        k4a_device_get_serialnum(device, NULL, &serial_size);
-
-        // Allocate memory for the serial, then acquire it
-        char *serial = (char *)(malloc(serial_size));
-        k4a_device_get_serialnum(device, serial, &serial_size);
-        printf("Opened device: %s\n", serial);
-        free(serial);
-
-        config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-        config.camera_fps = K4A_FRAMES_PER_SECOND_30;
-        config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-        config.color_resolution = K4A_COLOR_RESOLUTION_1080P;
-        config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
-        config.synchronized_images_only = true;
-
-        if (K4A_RESULT_SUCCEEDED != k4a_device_start_cameras(device, &config))
-        {
-            k4a_device_close(device);
-            throw FailedToStartTrackerException();
-        }
-
-        // Display the color image
-        k4a_device_get_calibration(device, config.depth_mode, config.color_resolution, &calibration);
-        transformation = k4a_transformation_create(&calibration);
-
-        dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
-        dlib::deserialize(FileSystem::getPath("data/mmod_human_face_detector.dat").c_str()) >> cnn_face_detector;
-
-        // Head distance 50cm
-        leftEyePos = glm::vec3(0.0f, 0.0f, 50.0f);
+        throw FailedToOpenTrackerException();
     }
+
+    // Get the size of the serial number
+    size_t serial_size = 0;
+    k4a_device_get_serialnum(device, NULL, &serial_size);
+
+    // Allocate memory for the serial, then acquire it
+    char *serial = (char *)(malloc(serial_size));
+    k4a_device_get_serialnum(device, serial, &serial_size);
+    printf("Opened device: %s\n", serial);
+    free(serial);
+
+    config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+    config.camera_fps = K4A_FRAMES_PER_SECOND_30;
+    config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
+    config.color_resolution = K4A_COLOR_RESOLUTION_1080P;
+    config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
+    config.synchronized_images_only = true;
+
+    if (K4A_RESULT_SUCCEEDED != k4a_device_start_cameras(device, &config))
+    {
+        k4a_device_close(device);
+        throw FailedToStartTrackerException();
+    }
+
+    // Display the color image
+    k4a_device_get_calibration(device, config.depth_mode, config.color_resolution, &calibration);
+    transformation = k4a_transformation_create(&calibration);
+
+    dlib::deserialize(FileSystem::getPath("data/shape_predictor_5_face_landmarks.dat").c_str()) >> predictor;
+    dlib::deserialize(FileSystem::getPath("data/mmod_human_face_detector.dat").c_str()) >> cnn_face_detector;
+
+    // configure mediapipe
+    std::string srcPath = FileSystem::getPath("data/");
+    std::string landmarkPath = FileSystem::getPath("data/mediapipe/modules/hand_landmark/hand_landmark_tracking_cpu.binarypb");
+    mp_set_resource_dir(srcPath.c_str());
+
+    // Load the binary graph and specify the input stream name.
+    mp_instance_builder *builder = mp_create_instance_builder(landmarkPath.c_str(), "image");
+
+    // Configure the graph with node options and side packets.
+    mp_add_option_float(builder, "palmdetectioncpu__TensorsToDetectionsCalculator", "min_score_thresh", 0.6);
+    mp_add_option_double(builder, "handlandmarkcpu__ThresholdingCalculator", "threshold", 0.2);
+    mp_add_side_packet(builder, "num_hands", mp_create_packet_int(2));
+    mp_add_side_packet(builder, "model_complexity", mp_create_packet_int(1));
+    mp_add_side_packet(builder, "use_prev_landmarks", mp_create_packet_bool(true));
+
+    // Create an instance from the instance builder.
+    instance = mp_create_instance(builder);
+    CHECK_MP_RESULT(instance)
+
+    // Create poller for the hand landmarks.
+    landmarks_poller = mp_create_poller(instance, "multi_hand_landmarks");
+    CHECK_MP_RESULT(landmarks_poller)
+
+    // Create a poller for the hand rectangles.
+    rects_poller = mp_create_poller(instance, "hand_rects");
+    CHECK_MP_RESULT(rects_poller)
+
+    // Start the graph.
+    CHECK_MP_RESULT(mp_start(instance))
+
+    // Head distance 50cm
+    leftEyePos = glm::vec3(0.0f, 0.0f, 50.0f);
+
+    // Rotation into the same basis as screenSpace
+    toScreenSpaceMat = glm::rotate(glm::mat4(1.0f), glm::radians(yRot), glm::vec3(1.0f, 0.0f, 0.0f));
 }
 
 glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_type)
@@ -169,20 +202,115 @@ std::vector<glm::vec3> Tracker::getPointCloud()
     k4a_transformation_depth_image_to_point_cloud(transformation, captureInstance->depthSpace.depthImage, K4A_CALIBRATION_TYPE_DEPTH, pointCloudImage);
 
     // Convert pointCloudImage to std::vector<glm::vec3>
-    int16_t* pointCloudData = reinterpret_cast<int16_t*>(k4a_image_get_buffer(pointCloudImage));
+    int16_t *pointCloudData = reinterpret_cast<int16_t *>(k4a_image_get_buffer(pointCloudImage));
     for (int i = 0; i < captureInstance->depthSpace.width * captureInstance->depthSpace.height; ++i)
     {
         int index = i * 3;
         float x = -static_cast<float>(pointCloudData[index]) / 10.0f;
         float y = -static_cast<float>(pointCloudData[index + 1]) / 10.0f;
         float z = static_cast<float>(pointCloudData[index + 2]) / 10.0f;
-        pointCloud.push_back(glm::vec3(x, y, z));
+        pointCloud.push_back(toScreenSpace(glm::vec3(x, y, z)));
     }
 
     // Remember to release the point cloud image after use
     k4a_image_release(pointCloudImage);
 
     return pointCloud;
+}
+
+void draw_landmarks(cv::Mat frame, mp_multi_face_landmark_list *landmarks)
+{
+    for (int i = 0; i < landmarks->length; i++)
+    {
+        const mp_landmark_list &hand = landmarks->elements[i];
+
+        // Draw hand connections as green lines.
+        for (const auto &connection : CONNECTIONS)
+        {
+            const mp_landmark &p1 = hand.elements[connection[0]];
+            const mp_landmark &p2 = hand.elements[connection[1]];
+            float x1 = (float)frame.cols * p1.x;
+            float y1 = (float)frame.rows * p1.y;
+            float x2 = (float)frame.cols * p2.x;
+            float y2 = (float)frame.rows * p2.y;
+
+            cv::line(frame, {(int)x1, (int)y1}, {(int)x2, (int)y2}, CV_RGB(0, 255, 0), 2);
+        }
+
+        // Draw hand landmarks as red dots.
+        for (int j = 0; j < hand.length; j++)
+        {
+            const mp_landmark &p = hand.elements[j];
+            float x = (float)frame.cols * p.x;
+            float y = (float)frame.rows * p.y;
+            cv::circle(frame, cv::Point((int)x, (int)y), 4, CV_RGB(255, 0, 0), -1);
+        }
+    }
+}
+
+void draw_rects(cv::Mat &frame, mp_rect_list *rects)
+{
+    for (int i = 0; i < rects->length; i++)
+    {
+        const mp_rect &rect = rects->elements[i];
+
+        cv::Point2f center((float)frame.cols * rect.x_center, (float)frame.rows * rect.y_center);
+        cv::Point2f size((float)frame.cols * rect.width, (float)frame.rows * rect.height);
+        float rotation = (float)rect.rotation * (180.0f / (float)CV_PI);
+
+        // Draw hand bounding boxes as blue rectangles.
+        cv::Point2f vertices[4];
+        cv::RotatedRect(center, size, rotation).points(vertices);
+        for (int j = 0; j < 4; j++)
+        {
+            cv::line(frame, vertices[j], vertices[(j + 1) % 4], CV_RGB(0, 0, 255), 2);
+        }
+    }
+}
+
+void Tracker::trackHand(cv::Mat colorImage)
+{
+    // Store the frame data in an image structure.
+    mp_image image;
+    image.data = colorImage.data;
+    image.width = colorImage.cols;
+    image.height = colorImage.rows;
+    image.format = mp_image_format_srgb;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Wrap the image in a packet and process it.
+    CHECK_MP_RESULT(mp_process(instance, mp_create_packet_image(image)))
+
+    // Wait until the image has been processed.
+    CHECK_MP_RESULT(mp_wait_until_idle(instance))
+
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    // Calculate the duration in milliseconds
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "Latency: " << duration.count() << " milliseconds" << std::endl;
+
+    // Draw the hand landmarks onto the frame.
+    if (mp_get_queue_size(landmarks_poller) > 0)
+    {
+        mp_packet *packet = mp_poll_packet(landmarks_poller);
+        mp_multi_face_landmark_list *landmarks = mp_get_norm_multi_face_landmarks(packet);
+        draw_landmarks(colorImage, landmarks);
+        mp_destroy_multi_face_landmarks(landmarks);
+        mp_destroy_packet(packet);
+    }
+
+    // Draw the hand rectangles onto the frame.
+    if (mp_get_queue_size(rects_poller) > 0)
+    {
+        mp_packet *packet = mp_poll_packet(rects_poller);
+        mp_rect_list *rects = mp_get_norm_rects(packet);
+        draw_rects(colorImage, rects);
+        mp_destroy_rects(rects);
+        mp_destroy_packet(packet);
+    }
 }
 
 void Tracker::update()
@@ -205,6 +333,9 @@ void Tracker::update()
         bgrImageGpu.download(processedBgrImage);
 
         dlib::cv_image<dlib::bgr_pixel> dlib_img = dlib::cv_image<dlib::bgr_pixel>(processedBgrImage);
+
+        // Tracking hands test
+        trackHand(processedBgrImage);
 
         std::vector<dlib::matrix<dlib::rgb_pixel>> batch;
         dlib::matrix<dlib::rgb_pixel> dlib_matrix;
@@ -281,12 +412,12 @@ void Tracker::update()
 
 glm::vec3 Tracker::getLeftEyePos()
 {
-    return leftEyePos;
+    return toScreenSpace(leftEyePos);
 }
 
 glm::vec3 Tracker::getRightEyePos()
 {
-    return rightEyePos;
+    return toScreenSpace(rightEyePos);
 }
 
 cv::Mat Tracker::getDepthImage()
@@ -368,6 +499,11 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
         std::cout << "Failed to create transformed_depth_image" << std::endl;
         exit(EXIT_FAILURE);
     }
+}
+
+glm::vec3 Tracker::toScreenSpace(glm::vec3 pos)
+{
+    return glm::vec3(toScreenSpaceMat * glm::vec4(pos, 1.0f));
 }
 
 Tracker::Capture::~Capture()

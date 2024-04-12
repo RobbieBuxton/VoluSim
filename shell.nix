@@ -1,4 +1,4 @@
-{ pkgs, k4apkgs, tolHeader }:
+{ pkgs, k4apkgs, tolHeader, libmediapipepkg }:
 pkgs.mkShell rec {
   name = "volumetricSim";
 
@@ -31,6 +31,7 @@ pkgs.mkShell rec {
             "${pkgs.opencv}/include/opencv4"
             "${pkgs.dlib}/include"
             "${k4apkgs.libk4a-dev}/include"
+            "${libmediapipepkg}/include"
           ];
           defines = [ ];
           compilerPath = "${pkgs.gcc}/bin/gcc";
