@@ -6,8 +6,10 @@
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing/shape_predictor.h>
 #include <dlib/dnn.h>
+#include <optional>
 
 #include "mediapipe.h"
+#include "hand.hpp"
 
 template <long num_filters, typename SUBNET>
 using con5d = dlib::con<num_filters, 5, 5, 2, 2, SUBNET>;
@@ -60,16 +62,16 @@ public:
     ~Tracker();
     void update();
     void close();
-    glm::vec3 getLeftEyePos();
-    glm::vec3 getRightEyePos();
+    std::optional<glm::vec3> getLeftEyePos();
+    std::optional<glm::vec3> getRightEyePos();
+    std::optional<Hand> getHand();
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
     std::vector<glm::vec3> getPointCloud();
 
 private:
-
-    void createNewTrackingFrame(cv::Mat colorImage);
-    void debugDraw(cv::Mat colorImage);
+    void createNewTrackingFrame(cv::Mat inputColorImage);
+    void debugDraw(cv::Mat inputColorImage);
     glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
     glm::vec3 toScreenSpace(glm::vec3 pos);
     k4a_device_t device;
@@ -82,7 +84,6 @@ private:
 
     dlib::shape_predictor predictor;
 
-   
     cv::Mat colorImage;
     cv::Mat depthImage;
 
@@ -114,18 +115,36 @@ private:
         int32_t timeout = 17;
     };
 
-    class TrackingFrame
+    struct Rectangle
     {
-    public:
-        ~TrackingFrame();
-        std::vector<dlib::rectangle> faces;
-        std::vector<dlib::full_object_detection> faceLandmarks;
-        mp_multi_face_landmark_list *handLandmarks;
-        mp_rect_list *rects;
-        glm::vec3 leftEyePos;
-        glm::vec3 rightEyePos;
+        int x;
+        int y;
+        int width;
+        int height;
+        float rotation;
     };
 
+    struct HandLandmarks
+    {
+        glm::vec2 landmarks[21];
+    };
+
+    struct FaceLandmarks
+    {
+        glm::vec2 landmarks[5];
+    };
+
+    class TrackingFrame
+    {
+
+    public:
+        std::vector<Rectangle> faces;
+        std::vector<FaceLandmarks> faceLandmarks;
+        std::vector<HandLandmarks> handLandmarks;
+        std::vector<Rectangle> handBox;
+
+    private:
+    };
 
     std::unique_ptr<TrackingFrame> trackingFrame;
     std::unique_ptr<Capture> captureInstance;

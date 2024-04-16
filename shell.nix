@@ -1,5 +1,5 @@
 { pkgs, k4apkgs, tolHeader, libmediapipepkg }:
-pkgs.mkShell rec {
+pkgs.mkShell {
   name = "volumetricSim";
 
   packages = with pkgs; [   
@@ -9,6 +9,7 @@ pkgs.mkShell rec {
     glxinfo
     killall
     jq
+    nil
     cntr #For debugging in theory
   ] ++ (with k4apkgs; [
     k4a-tools

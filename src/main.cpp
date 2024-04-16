@@ -13,6 +13,7 @@
 #include <exception>
 #include <thread>
 #include <chrono>
+#include <optional>
 #include <opencv2/core.hpp>
 
 #include <opencv2/imgcodecs.hpp>
@@ -28,6 +29,7 @@
 #include "model.hpp"
 #include "image.hpp"
 #include "pointcloud.hpp"
+#include "hand.hpp"
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -74,7 +76,7 @@ int main()
     double lastTime = glfwGetTime();
     int nbFrames = 0;
 
-    glm::vec3 lastEyePos = trackerPtr->getLeftEyePos() + cameraOffset;
+    glm::vec3 lastEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
     // Initialize a counter for eye position changes
     int eyePosChangeCount = 0;
 
@@ -84,7 +86,16 @@ int main()
         double currentTime = glfwGetTime();
         nbFrames++;
         // Check if the eye position has changed
-        glm::vec3 currentEyePos = trackerPtr->getLeftEyePos() + cameraOffset;
+        glm::vec3 currentEyePos;
+        std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
+        if (!leftEyePos.has_value())
+        {
+            currentEyePos = lastEyePos;
+        }
+        else
+        {
+            currentEyePos = leftEyePos.value() + cameraOffset;
+        }
         if (glm::length(currentEyePos - lastEyePos) > std::numeric_limits<float>::epsilon())
         {
             // Eye position has changed
@@ -144,7 +155,13 @@ int main()
 
         pointCloud.updateCloud(trackerPtr->getPointCloud());
 
-        pointCloud.drawWith(cube, modelShader, cameraOffset, currentEyePos);
+        // pointCloud.drawWith(cube, modelShader, cameraOffset, currentEyePos);
+
+        std::optional<Hand> hand = trackerPtr->getHand();
+        if (hand.has_value())
+        {
+            hand.value().drawWith(cube, modelShader, cameraOffset, currentEyePos);
+        }
 
         debugInfo.displayImage();
         colourCamera.displayImage();
@@ -155,13 +172,33 @@ int main()
     }
     trackerThread.join();
 
+    std::cout << "Debug 1" << std::endl;
+
     std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
 
     pointCloud.save(miscPath + "pointCloud.csv");
     colourCamera.save(miscPath + "colourImage.png");
     depthCamera.save(miscPath + "depthImage.png");
-    saveVec3ToCSV(trackerPtr->getLeftEyePos(), miscPath + "leftEyePos.csv");
-    saveVec3ToCSV(trackerPtr->getRightEyePos(), miscPath + "rightEyePos.csv");
+
+
+    std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
+    if (leftEyePos.has_value())
+    {
+        saveVec3ToCSV(leftEyePos.value(), miscPath + "leftEyePos.csv");
+    }
+    
+    
+    std::optional<glm::vec3> rightEyePos = trackerPtr->getRightEyePos();
+    if (rightEyePos.has_value())
+    {
+        saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
+    }
+
+    std::optional<Hand> hand = trackerPtr->getHand();
+    if (hand.has_value())
+    {
+        hand.value().save(miscPath + "hand.csv");
+    }
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------

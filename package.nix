@@ -84,6 +84,7 @@
           "src/mesh.cpp"
           "src/image.cpp"
           "src/pointcloud.cpp"
+          "src/hand.cpp"
           "${gladBuildDir}/src/gl.c"
         ];
         libs = [
