@@ -427,7 +427,8 @@ std::optional<Hand> Tracker::getHand()
     {
         for (const auto &landmark : trackingFrame->handLandmarks[0].landmarks)
         {
-            landmarks.push_back(toScreenSpace(calculate3DPos(landmark.x, landmark.y, K4A_CALIBRATION_TYPE_COLOR)));
+            // Correct for down sample
+            landmarks.push_back(toScreenSpace(calculate3DPos(landmark.x * 2, landmark.y * 2, K4A_CALIBRATION_TYPE_COLOR)));
         }
         return Hand(landmarks);
     }

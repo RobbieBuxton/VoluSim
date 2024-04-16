@@ -16,10 +16,10 @@ void Hand::drawWith(Model model, Shader shader, glm::vec3 cameraOffset, glm::vec
     glm::mat4 modelMatrix, scaleMatrix, translationMatrix, centeringMatrix;
     centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
     scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.1, 0.1, 0.1));
-    shader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
+    shader.setVec3("objectColor", glm::vec3(0.0f, 1.0f, 0.0f));
 
-    for (const auto& point : landmarks)
-    {   
+    for (const auto &point : landmarks)
+    {
         if (point.z < currentEyePos.z)
         {
             glm::vec3 pointTranslation = point + cameraOffset;
@@ -31,11 +31,11 @@ void Hand::drawWith(Model model, Shader shader, glm::vec3 cameraOffset, glm::vec
     }
 }
 
-
-void Hand::save(const std::string& filename)
+void Hand::save(const std::string &filename)
 {
     std::ofstream outFile(filename);
-    if (!outFile.is_open()) {
+    if (!outFile.is_open())
+    {
         std::cerr << "Error: Could not open file for writing: " << filename << std::endl;
         return;
     }
@@ -44,7 +44,8 @@ void Hand::save(const std::string& filename)
     outFile << "x, y, z\n";
 
     // Write the points
-    for (const auto& point : landmarks) {
+    for (const auto &point : landmarks)
+    {
         outFile << point.x << ", " << point.y << ", " << point.z << "\n";
     }
 
