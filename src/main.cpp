@@ -67,7 +67,7 @@ int main()
 
     // render loop
     // -----------
-    PointCloud pointCloud = PointCloud();
+
     Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
     Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
     Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
@@ -153,14 +153,11 @@ int main()
             depthCamera.updateImage(trackerPtr->getDepthImage());
         }
 
-        pointCloud.updateCloud(trackerPtr->getPointCloud());
-
-        // pointCloud.drawWith(cube, modelShader, cameraOffset, currentEyePos);
-
         std::optional<Hand> hand = trackerPtr->getHand();
         if (hand.has_value())
         {
             hand.value().drawWith(cube, modelShader, cameraOffset, currentEyePos);
+            hand.value().checkIfGrabbing();
         }
 
         debugInfo.displayImage();
@@ -176,6 +173,8 @@ int main()
 
     std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
 
+    PointCloud pointCloud = PointCloud();
+    pointCloud.updateCloud(trackerPtr->getPointCloud());
     pointCloud.save(miscPath + "pointCloud.csv");
     colourCamera.save(miscPath + "colourImage.png");
     depthCamera.save(miscPath + "depthImage.png");
