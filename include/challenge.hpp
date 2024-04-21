@@ -3,6 +3,7 @@
 
 #include "model.hpp"
 #include "shader.hpp"
+#include "renderer.hpp"
 #include "hand.hpp"
 #include <vector>
 #include <glm/glm.hpp>
@@ -11,7 +12,7 @@
 class Challenge
 {
 public:
-    Challenge();
+    Challenge(std::shared_ptr<Renderer> globalRenderer);
     void drawWith(Shader shader);
     void updateHand(Hand hand);
 private:
@@ -19,17 +20,12 @@ private:
     {
     public:
         Segment(glm::vec3 start, glm::vec3 end, float radius);
-        void drawWith(Model cube, Model line, Shader shader, glm::vec3 lastGrabPos);
-        void drawLine(Shader shader, glm::vec3 start, glm::vec3 end, Model line);
-
-    private:
         glm::vec3 start;
         glm::vec3 end;
         float radius;
     };
+    std::shared_ptr<Renderer> renderer;
     std::vector<Segment> segments;
-    std::unique_ptr<Model> cube;
-    std::unique_ptr<Model> line;
     std::unique_ptr<Hand> hand;
     glm::vec3 lastGrabPos = glm::vec3(0.0f, 0.0f, 0.0f);
 };

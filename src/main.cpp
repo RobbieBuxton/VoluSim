@@ -31,6 +31,7 @@
 #include "pointcloud.hpp"
 #include "hand.hpp"
 #include "challenge.hpp"
+#include "renderer.hpp"
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -54,12 +55,9 @@ int main()
     GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
     GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
     Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, 0.01f, 1.0f, 1000.0f);
+    std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
-
-    Model room("data/resources/models/room.obj");
-    Model chessSet("data/resources/models/chessSet.obj");
-    Model cube("data/resources/models/cube.obj");
 
     std::cout << "Finished Load" << std::endl;
 
@@ -81,7 +79,7 @@ int main()
     // Initialize a counter for eye position changes
     int eyePosChangeCount = 0;
 
-    Challenge challenge = Challenge();
+    Challenge challenge = Challenge(renderer);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -115,38 +113,10 @@ int main()
         }
 
         processInput(window);
-
-        // render
-        // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix, rotationMatrix;
-        // activate shader
-        modelShader.use();
-
-        modelShader.setMat4("projection", display.projectionToEye(currentEyePos));
-        modelShader.setVec3("viewPos", currentEyePos);
-        modelShader.setVec3("lightPos", glm::vec3(0.0f, display.height, 80.0f));
-        modelShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-
-        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(display.width, display.height, display.depth));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, display.height / 2.0, -display.depth / 2.0));
-        model = translationMatrix * scaleMatrix;
-        modelShader.setMat4("model", model);
-        modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
-
-        room.draw(modelShader);
-
-        centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
-        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, display.height / 2.0, 5.0f));
-        rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0));
-        model = translationMatrix * scaleMatrix * centeringMatrix * rotationMatrix;
-        modelShader.setMat4("model", model);
-        modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
-
-        // chessSet.draw(modelShader);
+        
+        renderer->clear();
+        renderer->updateEyePos(currentEyePos);
+        renderer->drawRoom();
 
         // Need to convert this to render with opengl rather than opencv
         if (!trackerPtr->getColorImage().empty())
@@ -160,9 +130,7 @@ int main()
         std::optional<Hand> hand = trackerPtr->getHand();
         if (hand.has_value())
         {
-            hand.value().drawWith(cube, modelShader, currentEyePos);
             challenge.updateHand(hand.value());
-            
         }
 
         challenge.drawWith(modelShader);
@@ -175,8 +143,6 @@ int main()
         glfwPollEvents();
     }
     trackerThread.join();
-
-    std::cout << "Debug 1" << std::endl;
 
     std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
 
