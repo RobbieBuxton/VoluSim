@@ -23,15 +23,15 @@ struct Material {
 class Model 
 {
     public:
-        Model(char *objPath)
+        Model(const char *objPath)
         {
             loadObjFile(objPath);
         }
-        Model(char *objPath, char *texturePath)
+        Model(const char *objPath, char *texturePath)
         {
             loadObjFile(objPath);
         }
-        void Draw(Shader &shader);	
+        void draw(Shader &shader);	
     private:
         // model data
         std::vector<std::shared_ptr<Mesh>> meshes;

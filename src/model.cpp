@@ -169,18 +169,17 @@ void Model::loadObjFile(const std::string &objPath)
     }
 }
 
-void Model::Draw(Shader &shader)
+void Model::draw(Shader &shader)
 {
     // Assuming you have a std::vector<Material> myMaterials with your material data
     for (int i = 0; i < meshMaterials.size(); ++i)
     {
-        // std::cout << glm::to_string(meshMaterials[i].ka) << std::endl;
         shader.setVec3("ambient", meshMaterials[i].ka, i);
         shader.setVec3("diffuse", meshMaterials[i].kd, i);
         shader.setVec3("specular", meshMaterials[i].ks, i);
         shader.setInt("shininess", meshMaterials[i].ns, i);
     }
-    // std::cout << meshes.size() << std::endl;
+
     for (const auto &mesh : meshes)
     {
         glBindVertexArray(mesh->VAO);

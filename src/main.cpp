@@ -30,6 +30,7 @@
 #include "image.hpp"
 #include "pointcloud.hpp"
 #include "hand.hpp"
+#include "challenge.hpp"
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -52,7 +53,7 @@ int main()
     GLfloat dDepth = 39.5f;
     GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
     GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
-    Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, pixelScaledHeight, 1.0f, 1000.0f);
+    Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, 0.01f, 1.0f, 1000.0f);
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(30.0f);
 
@@ -79,6 +80,8 @@ int main()
     glm::vec3 lastEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
     // Initialize a counter for eye position changes
     int eyePosChangeCount = 0;
+
+    Challenge challenge = Challenge();
 
     while (!glfwWindowShouldClose(window))
     {
@@ -118,7 +121,7 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix;
+        glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix, rotationMatrix;
         // activate shader
         modelShader.use();
 
@@ -133,16 +136,17 @@ int main()
         modelShader.setMat4("model", model);
         modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.5f));
 
-        room.Draw(modelShader);
+        room.draw(modelShader);
 
         centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
-        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
-        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, display.height / 3.0, 0));
-        model = translationMatrix * scaleMatrix * centeringMatrix;
+        scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
+        translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, display.height / 2.0, 5.0f));
+        rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0));
+        model = translationMatrix * scaleMatrix * centeringMatrix * rotationMatrix;
         modelShader.setMat4("model", model);
         modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
 
-        chessSet.Draw(modelShader);
+        chessSet.draw(modelShader);
 
         // Need to convert this to render with opengl rather than opencv
         if (!trackerPtr->getColorImage().empty())
@@ -157,8 +161,11 @@ int main()
         if (hand.has_value())
         {
             hand.value().drawWith(cube, modelShader, cameraOffset, currentEyePos);
-            hand.value().checkIfGrabbing();
+            challenge.updateHand(hand.value());
+            
         }
+
+        challenge.drawWith(modelShader, cameraOffset);
 
         debugInfo.displayImage();
         colourCamera.displayImage();
@@ -179,14 +186,12 @@ int main()
     colourCamera.save(miscPath + "colourImage.png");
     depthCamera.save(miscPath + "depthImage.png");
 
-
     std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
     if (leftEyePos.has_value())
     {
         saveVec3ToCSV(leftEyePos.value(), miscPath + "leftEyePos.csv");
     }
-    
-    
+
     std::optional<glm::vec3> rightEyePos = trackerPtr->getRightEyePos();
     if (rightEyePos.has_value())
     {

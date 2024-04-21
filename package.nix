@@ -77,14 +77,7 @@
           "-march=skylake" # This is platform specific need to find a way to optimise this
         ];
         sources = [
-          "src/main.cpp"
-          "src/display.cpp"
-          "src/tracker.cpp"
-          "src/model.cpp"
-          "src/mesh.cpp"
-          "src/image.cpp"
-          "src/pointcloud.cpp"
-          "src/hand.cpp"
+          "src/*.cpp"
           "${gladBuildDir}/src/gl.c"
         ];
         libs = [

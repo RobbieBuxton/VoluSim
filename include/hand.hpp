@@ -6,12 +6,13 @@
 #include "model.hpp"
 #include "shader.hpp"
 #include "mediapipe.h"
+#include "optional"
 
 class Hand
 {
 public:
     Hand(std::vector<glm::vec3> inputLandmarks);
-    void checkIfGrabbing();
+    std::optional<glm::vec3> getGrabPosition();
     void drawWith(Model model, Shader shader, glm::vec3 cameraOffset, glm::vec3 currentEyePos);
     void save(const std::string &filename);
 
