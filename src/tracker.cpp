@@ -65,8 +65,11 @@ public:
     FailedToDetectFaceException() : TrackerException("Could not detect face from capture") {}
 };
 
-Tracker::Tracker(float yRot)
+Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
 {
+
+    cameraOffset = initCameraOffset;
+
     // Check for Trackers
     uint32_t count = k4a_device_get_installed_count();
     if (count == 0)
@@ -597,7 +600,7 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
 
 glm::vec3 Tracker::toScreenSpace(glm::vec3 pos)
 {
-    return glm::vec3(toScreenSpaceMat * glm::vec4(pos, 1.0f));
+    return glm::vec3(toScreenSpaceMat * glm::vec4(pos, 1.0f)) + cameraOffset;
 }
 
 Tracker::Capture::~Capture()

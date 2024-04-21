@@ -12,15 +12,16 @@ class Challenge
 {
 public:
     Challenge();
-    void drawWith(Shader shader, glm::vec3 cameraOffset);
+    void drawWith(Shader shader);
     void updateHand(Hand hand);
 private:
     class Segment
     {
     public:
         Segment(glm::vec3 start, glm::vec3 end, float radius);
-        void drawWith(Model cube, Model cylinder, Shader shader, glm::vec3 lastGrabPos, glm::vec3 cameraOffset);
-    
+        void drawWith(Model cube, Model line, Shader shader, glm::vec3 lastGrabPos);
+        void drawLine(Shader shader, glm::vec3 start, glm::vec3 end, Model line);
+
     private:
         glm::vec3 start;
         glm::vec3 end;
@@ -28,7 +29,7 @@ private:
     };
     std::vector<Segment> segments;
     std::unique_ptr<Model> cube;
-    std::unique_ptr<Model> cylinder;
+    std::unique_ptr<Model> line;
     std::unique_ptr<Hand> hand;
     glm::vec3 lastGrabPos = glm::vec3(0.0f, 0.0f, 0.0f);
 };

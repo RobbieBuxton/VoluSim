@@ -35,7 +35,7 @@ using net_type = dlib::loss_mmod<dlib::con<1, 9, 9, 1, 1, rcon5<rcon5<rcon5<down
 class Tracker
 {
 public:
-    Tracker(float yRot);
+    Tracker(glm::vec3 initCameraOffset, float yRot);
     ~Tracker();
     void update();
     void close();
@@ -51,6 +51,9 @@ private:
     void debugDraw(cv::Mat inputColorImage);
     glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
     glm::vec3 toScreenSpace(glm::vec3 pos);
+
+    glm::vec3 cameraOffset;
+
     k4a_device_t device;
     k4a_device_configuration_t config;
     k4a_calibration_t calibration;

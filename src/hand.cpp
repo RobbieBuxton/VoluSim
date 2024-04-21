@@ -24,10 +24,10 @@ std::optional<glm::vec3> Hand::getGrabPosition()
     return {};
 }
 
-void Hand::drawWith(Model model, Shader shader, glm::vec3 cameraOffset, glm::vec3 currentEyePos)
+void Hand::drawWith(Model model, Shader shader, glm::vec3 currentEyePos)
 {
-    glm::mat4 modelMatrix, scaleMatrix, translationMatrix, centeringMatrix;
-    centeringMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 2.0, 0.0));
+    glm::mat4 modelMatrix, scaleMatrix, translationMatrix;
+
     scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.1, 0.1, 0.1));
     shader.setVec3("objectColor", glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -35,9 +35,9 @@ void Hand::drawWith(Model model, Shader shader, glm::vec3 cameraOffset, glm::vec
     {
         if (point.z < currentEyePos.z)
         {
-            glm::vec3 pointTranslation = point + cameraOffset;
+            glm::vec3 pointTranslation = point;
             translationMatrix = glm::translate(glm::mat4(1.0f), pointTranslation);
-            modelMatrix = translationMatrix * scaleMatrix * centeringMatrix;
+            modelMatrix = translationMatrix * scaleMatrix;
             shader.setMat4("model", modelMatrix);
             model.draw(shader);
         }

@@ -55,7 +55,7 @@ int main()
     GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
     Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, 0.01f, 1.0f, 1000.0f);
 
-    std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(30.0f);
+    std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
 
     Model room("data/resources/models/room.obj");
     Model chessSet("data/resources/models/chessSet.obj");
@@ -63,7 +63,7 @@ int main()
 
     std::cout << "Finished Load" << std::endl;
 
-    glm::vec3 cameraOffset = glm::vec3(0.0f, dHeight, 3.0f);
+    
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 
     // render loop
@@ -97,7 +97,7 @@ int main()
         }
         else
         {
-            currentEyePos = leftEyePos.value() + cameraOffset;
+            currentEyePos = leftEyePos.value();
         }
         if (glm::length(currentEyePos - lastEyePos) > std::numeric_limits<float>::epsilon())
         {
@@ -146,7 +146,7 @@ int main()
         modelShader.setMat4("model", model);
         modelShader.setVec3("objectColor", glm::vec3(0.5f, 0.5f, 0.0f));
 
-        chessSet.draw(modelShader);
+        // chessSet.draw(modelShader);
 
         // Need to convert this to render with opengl rather than opencv
         if (!trackerPtr->getColorImage().empty())
@@ -160,12 +160,12 @@ int main()
         std::optional<Hand> hand = trackerPtr->getHand();
         if (hand.has_value())
         {
-            hand.value().drawWith(cube, modelShader, cameraOffset, currentEyePos);
+            hand.value().drawWith(cube, modelShader, currentEyePos);
             challenge.updateHand(hand.value());
             
         }
 
-        challenge.drawWith(modelShader, cameraOffset);
+        challenge.drawWith(modelShader);
 
         debugInfo.displayImage();
         colourCamera.displayImage();
