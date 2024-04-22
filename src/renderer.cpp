@@ -32,63 +32,57 @@ glm::mat4 Renderer::calculateRotation(glm::vec3 start, glm::vec3 end)
     return rotationMatrix;
 }
 
-
-void Renderer::drawPoint(glm::vec3 position) 
-{
-    glm::mat4 modelMatrix, translationMatrix, scaleMatrix;
+void Renderer::setupShader() {
     shader->use();
     shader->setMat4("projection", projectionToEye);
     shader->setVec3("viewPos", currentEyePos);
     shader->setVec3("lightPos", glm::vec3(0.0f, display->height, 80.0f));
     shader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+}
 
-    scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
-    translationMatrix = glm::translate(glm::mat4(1.0f), position);
-    
-    modelMatrix = translationMatrix * scaleMatrix;
+void Renderer::drawPoint(glm::vec3 position, float radius, int colorIdx) {
+    setupShader();
+
+    // point object has a radius of 0.5 so we scale accordingly
+    float scaleFactor = radius / 0.5f;
+
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(scaleFactor,scaleFactor, scaleFactor));
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
+    glm::mat4 modelMatrix = translationMatrix * scaleMatrix;
+
     shader->setMat4("model", modelMatrix);
-    shader->setInt("overrideMaterialID", 2);
+    shader->setInt("overrideMaterialID", colorIdx);
     sphere->draw(*shader.get());
     shader->setInt("overrideMaterialID", -1);
 }
 
-void Renderer::drawLine(glm::vec3 start, glm::vec3 end)
-{
-    glm::mat4 modelMatrix, scaleMatrix, translationMatrix, rotationMatrix;
+void Renderer::drawLine(glm::vec3 start, glm::vec3 end, float radius, int colorIdx) {
+    setupShader();
 
-    shader->use();
-    shader->setMat4("projection", projectionToEye);
-    shader->setVec3("viewPos", currentEyePos);
-    shader->setVec3("lightPos", glm::vec3(0.0f, display->height, 80.0f));
-    shader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-    scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, glm::distance(start, end), 1.0f));
-    rotationMatrix = calculateRotation(start, end);
-    translationMatrix = glm::translate(glm::mat4(1.0f), ((start + end) / 2.0f));
-    modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+    // cylinder object has a radius of 0.25 so we scale accordingly
+    float scaleFactor = radius / 0.25f;
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(scaleFactor, glm::distance(start, end), scaleFactor));
+
+
+    glm::mat4 rotationMatrix = calculateRotation(start, end);
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), (start + end) / 2.0f);
+    glm::mat4 modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+
     shader->setMat4("model", modelMatrix);
-    shader->setInt("overrideMaterialID", 2);
+    shader->setInt("overrideMaterialID", colorIdx);
     line->draw(*shader.get());
     shader->setInt("overrideMaterialID", -1);
 }
 
-void Renderer::drawRoom()
-{
-    glm::mat4 model, scaleMatrix, translationMatrix, centeringMatrix, rotationMatrix;
-    // activate shader
-    shader->use();
+void Renderer::drawRoom() {
+    setupShader();
 
-    shader->setMat4("projection", projectionToEye);
-    shader->setVec3("viewPos", currentEyePos);
-    shader->setVec3("lightPos", glm::vec3(0.0f, display->height, 80.0f));
-    shader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(display->width, display->height, display->depth));
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, display->height / 2.0, -display->depth / 2.0));
+    glm::mat4 model = translationMatrix * scaleMatrix;
 
-    scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(display->width, display->height, display->depth));
-    translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, display->height / 2.0, -display->depth / 2.0));
-    model = translationMatrix * scaleMatrix;
     shader->setMat4("model", model);
-
     room->draw(*shader.get());
-
 }
 
 void Renderer::updateEyePos(glm::vec3 currentEyePos)

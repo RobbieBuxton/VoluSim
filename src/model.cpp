@@ -110,7 +110,7 @@ void Model::loadObjFile(const std::string &objPath)
             // Retrieve the material ID for this face
             int currentMaterialID = shape.mesh.material_ids[f];
             // Loop over vertices in the face.
-            for (size_t v = 0; v < fv; v++)
+            for (int v = 0; v < fv; v++)
             {
                 // access to vertex
                 tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
@@ -172,7 +172,7 @@ void Model::loadObjFile(const std::string &objPath)
 void Model::draw(Shader &shader)
 {
     // Assuming you have a std::vector<Material> myMaterials with your material data
-    for (int i = 0; i < meshMaterials.size(); ++i)
+    for (int i = 0; i < (int) meshMaterials.size(); ++i)
     {
         shader.setVec3("ambient", meshMaterials[i].ka, i);
         shader.setVec3("diffuse", meshMaterials[i].kd, i);

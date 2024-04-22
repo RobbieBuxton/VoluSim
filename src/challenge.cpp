@@ -1,26 +1,39 @@
 #include "challenge.hpp"
 #include <glm/gtc/matrix_transform.hpp>
-// Top class of challenge
-// Sub classes are segements which represent rods where the user tries to enter in the rod through one face and
-// exit through the other face while not exceeding the radius of the rod
-// The rods would change colour when completed vs in the process of being completed vs not completed
-// calling render on challenger should call render on all segments
+#include <glm/glm.hpp>
 
 Challenge::Challenge(std::shared_ptr<Renderer> renderer)
 {
     this->renderer = renderer;
 
-    segments.push_back(Segment(glm::vec3(0.0, 25.0, 20.0), glm::vec3(5.0, 30.0, 25.0), 0.1));
-    segments.push_back(Segment(glm::vec3(5.0, 30.0, 25.0), glm::vec3(10.0, 25.0, 20.0), 0.1));
+    glm::vec3 up = glm::vec3(0.0, 5.0, 0.0);
+    glm::vec3 down = glm::vec3(0.0, -5.0, 0.0);
+    glm::vec3 forward = glm::vec3(0.0, 0.0, 5.0);
+    glm::vec3 backward = glm::vec3(0.0, 0.0, -5.0);
+    glm::vec3 right = glm::vec3(5.0, 0.0, 0.0);
+    glm::vec3 left = glm::vec3(-5.0, 0.0, 0.0);
+    
+    glm::vec3 oldPoint; 
+    glm::vec3 point = glm::vec3(-12.5, 20.0, 20.0); 
+
+    std::vector<glm::vec3> directions = {up, backward, up, right, forward, right, forward, left, down, right, right, backward, up, backward, right, down, forward, down};
+
+    for (auto direction: directions)
+    {
+        oldPoint = point;
+        point = oldPoint + direction;
+        segments.push_back(Segment(oldPoint, point, 0.1));
+    }
 }
 
 void Challenge::drawWith(Shader shader)
 {
     for (Segment segment : segments)
-    {
-        renderer->drawLine(segment.start, segment.end);
+    {   
+        renderer->drawPoint(segment.start, segment.radius*3, 1);
+        renderer->drawLine(segment.start, segment.end, segment.radius, 0);
+        renderer->drawPoint(segment.end, segment.radius*3, 1);
     }
-    renderer->drawPoint(lastGrabPos);
 }
 
 void Challenge::updateHand(Hand updatedHand)

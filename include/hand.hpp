@@ -7,17 +7,20 @@
 #include "shader.hpp"
 #include "mediapipe.h"
 #include "optional"
+#include "renderer.hpp"
 
 class Hand
 {
 public:
-    Hand(std::vector<glm::vec3> inputLandmarks);
+    Hand(std::shared_ptr<Renderer> renderer);
     std::optional<glm::vec3> getGrabPosition();
-    void drawWith(Model model, Shader shader, glm::vec3 currentEyePos);
+    void draw();
     void save(const std::string &filename);
+    void updateLandmarks(std::optional<std::vector<glm::vec3>> inputLandmarks);
 
 private:
     glm::vec3 landmarks[21];
+    std::shared_ptr<Renderer> renderer;
 };
 
 #endif

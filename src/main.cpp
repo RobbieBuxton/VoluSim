@@ -51,10 +51,10 @@ int main()
     // Depth is artifical the others are real
     GLfloat dWidth = 70.5f;
     GLfloat dHeight = 39.5f;
-    GLfloat dDepth = 39.5f;
+    GLfloat dDepth = 0.01f;
     GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
     GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
-    Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, 0.01f, 1.0f, 1000.0f);
+    Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, dDepth, 1.0f, 1000.0f);
     std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
 
     std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
@@ -80,6 +80,7 @@ int main()
     int eyePosChangeCount = 0;
 
     Challenge challenge = Challenge(renderer);
+    Hand hand = Hand(renderer);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -127,12 +128,11 @@ int main()
             depthCamera.updateImage(trackerPtr->getDepthImage());
         }
 
-        std::optional<Hand> hand = trackerPtr->getHand();
-        if (hand.has_value())
-        {
-            challenge.updateHand(hand.value());
-        }
-
+        hand.updateLandmarks(trackerPtr->getHandLandmarks());
+        hand.draw();
+        
+        challenge.updateHand(hand);
+        
         challenge.drawWith(modelShader);
 
         debugInfo.displayImage();
@@ -164,12 +164,8 @@ int main()
         saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
     }
 
-    std::optional<Hand> hand = trackerPtr->getHand();
-    if (hand.has_value())
-    {
-        hand.value().save(miscPath + "hand.csv");
-    }
-
+    hand.save(miscPath + "hand.csv");
+    
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();

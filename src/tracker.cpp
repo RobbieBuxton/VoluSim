@@ -167,6 +167,9 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
         uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->depthSpace.depthImage));
         int index = y * captureInstance->depthSpace.width + x;
         depth = depthBuffer[index];
+    } else 
+    {
+        throw std::runtime_error("Invalid source type");
     }
 
     k4a_float2_t pointK4APoint = {static_cast<float>(x), static_cast<float>(y)};
@@ -253,7 +256,7 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage)
         throw FailedToDetectFaceException();
     }
 
-    for (int i = 0; i < dets.size(); i++)
+    for (int i = 0; i < (int) dets.size(); i++)
     {
         FaceLandmarks face;
         face.box = {(int)(dets[i].rect.left() + dets[i].rect.right()) / 2,
@@ -471,7 +474,7 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
     }
 }
 
-std::optional<Hand> Tracker::getHand()
+std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 {
     std::vector<glm::vec3> landmarks;
     if (!trackF->hands.empty())
@@ -480,10 +483,9 @@ std::optional<Hand> Tracker::getHand()
         {
             // Correct for down sample
             landmarks.push_back(toScreenSpace(calculate3DPos(landmark.x * 2, landmark.y * 2, K4A_CALIBRATION_TYPE_COLOR)));
-            // landmarks.push_back({-landmark.x / 2, -landmark.y / 2, landmark.z / 2});
         }
 
-        return Hand(landmarks);
+        return landmarks;
     }
 
     return {};

@@ -9,7 +9,6 @@
 #include <optional>
 
 #include "mediapipe.h"
-#include "hand.hpp"
 
 template <long num_filters, typename SUBNET>
 using con5d = dlib::con<num_filters, 5, 5, 2, 2, SUBNET>;
@@ -41,7 +40,7 @@ public:
     void close();
     std::optional<glm::vec3> getLeftEyePos();
     std::optional<glm::vec3> getRightEyePos();
-    std::optional<Hand> getHand();
+    std::optional<std::vector<glm::vec3>> getHandLandmarks();
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
     std::vector<glm::vec3> getPointCloud();
