@@ -15,11 +15,13 @@ public:
     Hand(std::shared_ptr<Renderer> renderer);
     std::optional<glm::vec3> getGrabPosition();
     void draw();
-    void save(const std::string &filename);
+    // void save(const std::string &filename);
     void updateLandmarks(std::optional<std::vector<glm::vec3>> inputLandmarks);
 
 private:
-    glm::vec3 landmarks[21];
+    glm::vec3 index;
+    glm::vec3 thumb;
+    
     std::shared_ptr<Renderer> renderer;
 };
 

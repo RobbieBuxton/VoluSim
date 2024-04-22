@@ -12,9 +12,8 @@
 class Challenge
 {
 public:
-    Challenge(std::shared_ptr<Renderer> globalRenderer);
+    Challenge(std::shared_ptr<Renderer> renderer,  std::shared_ptr<Hand> hand);
     void drawWith(Shader shader);
-    void updateHand(Hand hand);
 private:
     class Segment
     {
@@ -25,8 +24,8 @@ private:
         float radius;
     };
     std::shared_ptr<Renderer> renderer;
+    std::shared_ptr<Hand> hand;
     std::vector<Segment> segments;
-    std::unique_ptr<Hand> hand;
     glm::vec3 lastGrabPos = glm::vec3(0.0f, 0.0f, 0.0f);
 };
 

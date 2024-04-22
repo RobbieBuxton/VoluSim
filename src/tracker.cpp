@@ -474,18 +474,51 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
     }
 }
 
+
+
+glm::vec3 Tracker::getFilteredPoint(glm::vec3 point) 
+{
+    glm::vec3 bestPoint = calculate3DPos(point.x * 2, point.y * 2, K4A_CALIBRATION_TYPE_COLOR);
+    float minZ = bestPoint.z;
+
+    // Iterate over a 3x3 grid centered on the original point
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            if (dx == 0 && dy == 0)
+                continue; // Skip the center point since it's already considered
+
+            glm::vec3 newPoint = calculate3DPos(point.x * 2 + dx, point.y * 2 + dy, K4A_CALIBRATION_TYPE_COLOR);
+            if (newPoint.z < minZ) {
+                minZ = newPoint.z;
+                bestPoint = newPoint;
+            }
+        }
+    }
+
+    return bestPoint;
+}
+
 std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 {
-    std::vector<glm::vec3> landmarks;
     if (!trackF->hands.empty())
     {
-        for (const auto &landmark : trackF->hands[0].landmarks)
-        {
-            // Correct for down sample
-            landmarks.push_back(toScreenSpace(calculate3DPos(landmark.x * 2, landmark.y * 2, K4A_CALIBRATION_TYPE_COLOR)));
-        }
+        std::vector<glm::vec3> landmarks;
 
-        return landmarks;
+        glm::vec3 landmark = trackF->hands[0].landmarks[mp_hand_landmark_index_finger_tip];
+        // Correct for down sample
+        glm::vec3 pos = getFilteredPoint(landmark);
+        landmarks.push_back(toScreenSpace(pos));
+
+        landmark = trackF->hands[0].landmarks[mp_hand_landmark_thumb_tip];
+        // Correct for down sample
+        pos = getFilteredPoint(landmark);;
+        landmarks.push_back(toScreenSpace(pos));
+        
+       
+        if (glm::distance(landmarks[0], landmarks[1]) < 18.0f)
+        {
+            return landmarks;
+        } 
     }
 
     return {};

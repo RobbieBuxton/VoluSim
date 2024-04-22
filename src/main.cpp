@@ -79,8 +79,9 @@ int main()
     // Initialize a counter for eye position changes
     int eyePosChangeCount = 0;
 
-    Challenge challenge = Challenge(renderer);
-    Hand hand = Hand(renderer);
+    
+    std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer);
+    Challenge challenge = Challenge(renderer, hand);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -128,11 +129,9 @@ int main()
             depthCamera.updateImage(trackerPtr->getDepthImage());
         }
 
-        hand.updateLandmarks(trackerPtr->getHandLandmarks());
-        hand.draw();
-        
-        challenge.updateHand(hand);
-        
+        hand->updateLandmarks(trackerPtr->getHandLandmarks());
+        hand->draw();
+                
         challenge.drawWith(modelShader);
 
         debugInfo.displayImage();
@@ -164,7 +163,7 @@ int main()
         saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
     }
 
-    hand.save(miscPath + "hand.csv");
+    // hand.save(miscPath + "hand.csv");
     
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------

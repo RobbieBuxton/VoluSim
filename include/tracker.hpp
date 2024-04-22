@@ -50,7 +50,7 @@ private:
     void debugDraw(cv::Mat inputColorImage);
     glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
     glm::vec3 toScreenSpace(glm::vec3 pos);
-
+    glm::vec3 getFilteredPoint(glm::vec3 point);
     glm::vec3 cameraOffset;
 
     k4a_device_t device;
