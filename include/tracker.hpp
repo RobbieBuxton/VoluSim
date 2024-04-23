@@ -9,7 +9,6 @@
 #include <optional>
 
 #include "mediapipe.h"
-#include "hand.hpp"
 
 template <long num_filters, typename SUBNET>
 using con5d = dlib::con<num_filters, 5, 5, 2, 2, SUBNET>;
@@ -35,13 +34,13 @@ using net_type = dlib::loss_mmod<dlib::con<1, 9, 9, 1, 1, rcon5<rcon5<rcon5<down
 class Tracker
 {
 public:
-    Tracker(float yRot);
+    Tracker(glm::vec3 initCameraOffset, float yRot);
     ~Tracker();
     void update();
     void close();
     std::optional<glm::vec3> getLeftEyePos();
     std::optional<glm::vec3> getRightEyePos();
-    std::optional<Hand> getHand();
+    std::optional<std::vector<glm::vec3>> getHandLandmarks();
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
     std::vector<glm::vec3> getPointCloud();
@@ -51,6 +50,9 @@ private:
     void debugDraw(cv::Mat inputColorImage);
     glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
     glm::vec3 toScreenSpace(glm::vec3 pos);
+    glm::vec3 getFilteredPoint(glm::vec3 point);
+    glm::vec3 cameraOffset;
+
     k4a_device_t device;
     k4a_device_configuration_t config;
     k4a_calibration_t calibration;

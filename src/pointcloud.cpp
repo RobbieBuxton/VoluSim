@@ -24,7 +24,7 @@ void PointCloud::drawWith(Model model, Shader shader, glm::vec3 cameraOffset, gl
             translationMatrix = glm::translate(glm::mat4(1.0f), pointTranslation);
             modelMatrix = translationMatrix * scaleMatrix * centeringMatrix;
             shader.setMat4("model", modelMatrix);
-            model.Draw(shader);
+            model.draw(shader);
         }
     }
 }

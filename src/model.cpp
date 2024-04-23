@@ -110,7 +110,7 @@ void Model::loadObjFile(const std::string &objPath)
             // Retrieve the material ID for this face
             int currentMaterialID = shape.mesh.material_ids[f];
             // Loop over vertices in the face.
-            for (size_t v = 0; v < fv; v++)
+            for (int v = 0; v < fv; v++)
             {
                 // access to vertex
                 tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
@@ -169,18 +169,17 @@ void Model::loadObjFile(const std::string &objPath)
     }
 }
 
-void Model::Draw(Shader &shader)
+void Model::draw(Shader &shader)
 {
     // Assuming you have a std::vector<Material> myMaterials with your material data
-    for (int i = 0; i < meshMaterials.size(); ++i)
+    for (int i = 0; i < (int) meshMaterials.size(); ++i)
     {
-        // std::cout << glm::to_string(meshMaterials[i].ka) << std::endl;
         shader.setVec3("ambient", meshMaterials[i].ka, i);
         shader.setVec3("diffuse", meshMaterials[i].kd, i);
         shader.setVec3("specular", meshMaterials[i].ks, i);
         shader.setInt("shininess", meshMaterials[i].ns, i);
     }
-    // std::cout << meshes.size() << std::endl;
+
     for (const auto &mesh : meshes)
     {
         glBindVertexArray(mesh->VAO);

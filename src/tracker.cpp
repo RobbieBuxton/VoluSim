@@ -65,8 +65,11 @@ public:
     FailedToDetectFaceException() : TrackerException("Could not detect face from capture") {}
 };
 
-Tracker::Tracker(float yRot)
+Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
 {
+
+    cameraOffset = initCameraOffset;
+
     // Check for Trackers
     uint32_t count = k4a_device_get_installed_count();
     if (count == 0)
@@ -164,6 +167,9 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
         uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->depthSpace.depthImage));
         int index = y * captureInstance->depthSpace.width + x;
         depth = depthBuffer[index];
+    } else 
+    {
+        throw std::runtime_error("Invalid source type");
     }
 
     k4a_float2_t pointK4APoint = {static_cast<float>(x), static_cast<float>(y)};
@@ -250,7 +256,7 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage)
         throw FailedToDetectFaceException();
     }
 
-    for (int i = 0; i < dets.size(); i++)
+    for (int i = 0; i < (int) dets.size(); i++)
     {
         FaceLandmarks face;
         face.box = {(int)(dets[i].rect.left() + dets[i].rect.right()) / 2,
@@ -468,19 +474,51 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
     }
 }
 
-std::optional<Hand> Tracker::getHand()
+
+
+glm::vec3 Tracker::getFilteredPoint(glm::vec3 point) 
 {
-    std::vector<glm::vec3> landmarks;
+    glm::vec3 bestPoint = calculate3DPos(point.x * 2, point.y * 2, K4A_CALIBRATION_TYPE_COLOR);
+    float minZ = bestPoint.z;
+
+    // Iterate over a 3x3 grid centered on the original point
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            if (dx == 0 && dy == 0)
+                continue; // Skip the center point since it's already considered
+
+            glm::vec3 newPoint = calculate3DPos(point.x * 2 + dx, point.y * 2 + dy, K4A_CALIBRATION_TYPE_COLOR);
+            if (newPoint.z < minZ) {
+                minZ = newPoint.z;
+                bestPoint = newPoint;
+            }
+        }
+    }
+
+    return bestPoint;
+}
+
+std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
+{
     if (!trackF->hands.empty())
     {
-        for (const auto &landmark : trackF->hands[0].landmarks)
-        {
-            // Correct for down sample
-            landmarks.push_back(toScreenSpace(calculate3DPos(landmark.x * 2, landmark.y * 2, K4A_CALIBRATION_TYPE_COLOR)));
-            // landmarks.push_back({-landmark.x / 2, -landmark.y / 2, landmark.z / 2});
-        }
+        std::vector<glm::vec3> landmarks;
 
-        return Hand(landmarks);
+        glm::vec3 landmark = trackF->hands[0].landmarks[mp_hand_landmark_index_finger_tip];
+        // Correct for down sample
+        glm::vec3 pos = getFilteredPoint(landmark);
+        landmarks.push_back(toScreenSpace(pos));
+
+        landmark = trackF->hands[0].landmarks[mp_hand_landmark_thumb_tip];
+        // Correct for down sample
+        pos = getFilteredPoint(landmark);;
+        landmarks.push_back(toScreenSpace(pos));
+        
+       
+        if (glm::distance(landmarks[0], landmarks[1]) < 18.0f)
+        {
+            return landmarks;
+        } 
     }
 
     return {};
@@ -597,7 +635,7 @@ Tracker::Capture::Capture(k4a_device_t device, k4a_transformation_t transformati
 
 glm::vec3 Tracker::toScreenSpace(glm::vec3 pos)
 {
-    return glm::vec3(toScreenSpaceMat * glm::vec4(pos, 1.0f));
+    return glm::vec3(toScreenSpaceMat * glm::vec4(pos, 1.0f)) + cameraOffset;
 }
 
 Tracker::Capture::~Capture()
