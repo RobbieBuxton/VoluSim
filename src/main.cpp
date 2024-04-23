@@ -131,7 +131,8 @@ int main()
 
         hand->updateLandmarks(trackerPtr->getHandLandmarks());
         hand->draw();
-                
+        
+        challenge.update();
         challenge.drawWith(modelShader);
 
         debugInfo.displayImage();
