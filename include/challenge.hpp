@@ -13,7 +13,7 @@ class Challenge
 {
 public:
     Challenge(std::shared_ptr<Renderer> renderer,  std::shared_ptr<Hand> hand);
-    void drawWith(Shader shader);
+    void draw();
     void update();
 private:
     class Segment

@@ -146,11 +146,10 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
     // Start the graph.
     CHECK_MP_RESULT(mp_start(instance))
 
-    // Head distance 50cm
-    trackF = std::make_unique<TrackingFrame>();
-
     // Rotation into the same basis as screenSpace
     toScreenSpaceMat = glm::rotate(glm::mat4(1.0f), glm::radians(yRot), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    trackF = std::make_unique<TrackingFrame>();
 }
 
 glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_type)
@@ -158,16 +157,17 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
     uint16_t depth;
     if (source_type == K4A_CALIBRATION_TYPE_COLOR)
     {
-        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->colorSpace.depthImage));
-        int index = y * captureInstance->colorSpace.width + x;
+        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(trackF->cInst->colorSpace.depthImage));
+        int index = y * trackF->cInst->colorSpace.width + x;
         depth = depthBuffer[index];
     }
     else if (source_type == K4A_CALIBRATION_TYPE_DEPTH)
     {
-        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(captureInstance->depthSpace.depthImage));
-        int index = y * captureInstance->depthSpace.width + x;
+        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(trackF->cInst->depthSpace.depthImage));
+        int index = y * trackF->cInst->depthSpace.width + x;
         depth = depthBuffer[index];
-    } else 
+    }
+    else
     {
         throw std::runtime_error("Invalid source type");
     }
@@ -192,7 +192,7 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
 std::vector<glm::vec3> Tracker::getPointCloud()
 {
     std::vector<glm::vec3> pointCloud;
-    if ((captureInstance == nullptr) || (captureInstance->depthSpace.depthImage == NULL))
+    if ((trackF->cInst == nullptr) || (trackF->cInst->depthSpace.depthImage == NULL))
     {
         return pointCloud;
     }
@@ -200,17 +200,17 @@ std::vector<glm::vec3> Tracker::getPointCloud()
 
     // Create an image to hold the point cloud data
     k4a_image_create(K4A_IMAGE_FORMAT_CUSTOM,
-                     captureInstance->depthSpace.width,
-                     captureInstance->depthSpace.height,
-                     captureInstance->depthSpace.width * 3 * (int)sizeof(int16_t),
+                     trackF->cInst->depthSpace.width,
+                     trackF->cInst->depthSpace.height,
+                     trackF->cInst->depthSpace.width * 3 * (int)sizeof(int16_t),
                      &pointCloudImage);
 
     // Transform the depth image to a point cloud
-    k4a_transformation_depth_image_to_point_cloud(transformation, captureInstance->depthSpace.depthImage, K4A_CALIBRATION_TYPE_DEPTH, pointCloudImage);
+    k4a_transformation_depth_image_to_point_cloud(transformation, trackF->cInst->depthSpace.depthImage, K4A_CALIBRATION_TYPE_DEPTH, pointCloudImage);
 
     // Convert pointCloudImage to std::vector<glm::vec3>
     int16_t *pointCloudData = reinterpret_cast<int16_t *>(k4a_image_get_buffer(pointCloudImage));
-    for (int i = 0; i < captureInstance->depthSpace.width * captureInstance->depthSpace.height; ++i)
+    for (int i = 0; i < trackF->cInst->depthSpace.width * trackF->cInst->depthSpace.height; ++i)
     {
         int index = i * 3;
         float x = -static_cast<float>(pointCloudData[index]) / 10.0f;
@@ -225,9 +225,10 @@ std::vector<glm::vec3> Tracker::getPointCloud()
     return pointCloud;
 }
 
-void Tracker::createNewTrackingFrame(cv::Mat inputColorImage)
+void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> cInst)
 {
-    std::unique_ptr<TrackingFrame> newTrackingFrame = std::make_unique<TrackingFrame>();
+    std::unique_ptr<TrackingFrame> newTrackF = std::make_unique<TrackingFrame>();
+    newTrackF->cInst = std::move(cInst);
     // Store the frame data in an image structure.
     mp_image image;
     image.data = inputColorImage.data;
@@ -251,27 +252,33 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage)
     // Get first from batch (I think need to double check this)
     std::vector<dlib::mmod_rect> dets = detections[0];
 
-    if (dets.empty())
+    // If face detected
+    if (!dets.empty())
     {
-        throw FailedToDetectFaceException();
-    }
-
-    for (int i = 0; i < (int) dets.size(); i++)
-    {
-        FaceLandmarks face;
-        face.box = {(int)(dets[i].rect.left() + dets[i].rect.right()) / 2,
-                                              (int)(dets[i].rect.top() + dets[i].rect.bottom()) / 2,
-                                              (int)(dets[i].rect.right() - dets[i].rect.left()),
-                                              (int)(dets[i].rect.bottom() - dets[i].rect.top()),
-                                              (float)0.0f};
-
-        
-        dlib::full_object_detection detection = predictor(dlib_img, dets[i].rect);
-        for (int j = 0; j < 5; j++)
+        for (int i = 0; i < (int)dets.size(); i++)
         {
-            face.landmarks[j] = {detection.part(j).x(), detection.part(j).y()};
+            FaceLandmarks face;
+            face.box = {(int)(dets[i].rect.left() + dets[i].rect.right()) / 2,
+                        (int)(dets[i].rect.top() + dets[i].rect.bottom()) / 2,
+                        (int)(dets[i].rect.right() - dets[i].rect.left()),
+                        (int)(dets[i].rect.bottom() - dets[i].rect.top()),
+                        (float)0.0f};
+
+            dlib::full_object_detection detection = predictor(dlib_img, dets[i].rect);
+            for (int j = 0; j < 5; j++)
+            {
+                face.landmarks[j] = {detection.part(j).x(), detection.part(j).y()};
+            }
+            newTrackF->faces.push_back(face);
         }
-        newTrackingFrame->faces.push_back(face);
+    }
+    // Copy old face detection (assume hand occluding face)
+    else
+    {
+        for (int i = 0; i < trackF->faces.size(); i++)
+        {
+            newTrackF->faces.push_back(trackF->faces[i]);
+        }
     }
 
     // Wait until the image has been processed.
@@ -301,68 +308,93 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage)
 
                 hand.landmarks[j] = {x, y, z};
             }
-            
 
             const mp_rect &rect = rects->elements[i];
             hand.box = {(int)(inputColorImage.cols * rect.x_center),
-                                                  (int)(inputColorImage.rows * rect.y_center),
-                                                  (int)(inputColorImage.cols * rect.width),
-                                                  (int)(inputColorImage.rows * rect.height),
-                                                  rect.rotation};
-            newTrackingFrame->hands.push_back(hand);
+                        (int)(inputColorImage.rows * rect.y_center),
+                        (int)(inputColorImage.cols * rect.width),
+                        (int)(inputColorImage.rows * rect.height),
+                        rect.rotation};
+            newTrackF->hands.push_back(hand);
         }
         mp_destroy_multi_face_landmarks(hand_landmarks_list);
         mp_destroy_packet(landmark_packet);
         mp_destroy_rects(rects);
         mp_destroy_packet(rects_packet);
     }
-    trackF = std::move(newTrackingFrame);
+    trackF = std::move(newTrackF);
 }
 
 void Tracker::update()
 {
     try
     {
+        // Define time points and durations
+        std::chrono::high_resolution_clock::time_point startOverall, stopOverall;
+        std::chrono::high_resolution_clock::time_point start, stop;
+        std::chrono::milliseconds durationCapture, durationGPUOperations, durationTracking, durationOverall;
 
-        auto start = std::chrono::high_resolution_clock::now();
+        startOverall = std::chrono::high_resolution_clock::now();
 
-        captureInstance = std::make_unique<Capture>(device, transformation);
+        // Step 1: Capture Instance
+        start = std::chrono::high_resolution_clock::now();
+        std::shared_ptr<Capture> cInst = std::make_shared<Capture>(device, transformation);
+        stop = std::chrono::high_resolution_clock::now();
+        durationCapture = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-        // Directly upload BGRA image to GPU and convert to BGR
+        // Steps 2, 3, and 4: GPU Operations (Upload to GPU, GPU Processing, Download from GPU)
+        start = std::chrono::high_resolution_clock::now();
+
+        // Upload to GPU
+        cv::Mat bgraImage(cInst->colorSpace.height, cInst->colorSpace.width, CV_8UC4, k4a_image_get_buffer(cInst->colorSpace.colorImage), (size_t)k4a_image_get_stride_bytes(cInst->colorSpace.colorImage));
         cv::cuda::GpuMat bgraImageGpu, bgrImageGpu;
-        cv::Mat bgraImage(captureInstance->colorSpace.height, captureInstance->colorSpace.width, CV_8UC4, k4a_image_get_buffer(captureInstance->colorSpace.colorImage), (size_t)k4a_image_get_stride_bytes(captureInstance->colorSpace.colorImage));
         bgraImageGpu.upload(bgraImage);
-        cv::cuda::cvtColor(bgraImageGpu, bgrImageGpu, cv::COLOR_BGRA2BGR);
 
-        // Perform any GPU-based image processing
+        // GPU Processing
+        cv::cuda::cvtColor(bgraImageGpu, bgrImageGpu, cv::COLOR_BGRA2BGR);
         cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
 
-        // Download the processed image from GPU to CPU for further processing with Dlib
+        // Download from GPU
         cv::Mat processedBgrImage;
         bgrImageGpu.download(processedBgrImage);
 
-        cv::Mat dImage(captureInstance->colorSpace.height, captureInstance->colorSpace.width, CV_16U, k4a_image_get_buffer(captureInstance->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(captureInstance->colorSpace.depthImage));
+        stop = std::chrono::high_resolution_clock::now();
+        durationGPUOperations = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-        cv::Mat normalisedDImage, colorDepthImage;
+        // Step 5: Run the tracking
+        start = std::chrono::high_resolution_clock::now();
+        try
+        {
+            createNewTrackingFrame(processedBgrImage, cInst);
 
-        createNewTrackingFrame(processedBgrImage);
+            // Normalize and map depth image (example of further processing)
+            cv::Mat dImage(trackF->cInst->colorSpace.height, trackF->cInst->colorSpace.width, CV_16U, k4a_image_get_buffer(trackF->cInst->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(trackF->cInst->colorSpace.depthImage));
+            cv::Mat normalisedDImage, colorDepthImage;
+            cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
+            cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
 
-        auto stop = std::chrono::high_resolution_clock::now();
+            colorDepthImage.copyTo(depthImage);
+            processedBgrImage.copyTo(colorImage);
 
-        // Calculate the duration in milliseconds
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+            debugDraw(colorImage);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Failed to create new tracking frame" << std::endl;
+        }
 
-        // std::cout << "Latency: " << duration.count() << " milliseconds" << std::endl;
+        stop = std::chrono::high_resolution_clock::now();
+        durationTracking = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-        cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
-        cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
+        stopOverall = std::chrono::high_resolution_clock::now();
+        durationOverall = std::chrono::duration_cast<std::chrono::milliseconds>(stopOverall - startOverall);
 
-        colorDepthImage.copyTo(depthImage);
-        processedBgrImage.copyTo(colorImage);
-
-        debugDraw(colorImage);
-
-        cv::waitKey(1);
+        // Print all durations at the end
+        std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
+                  << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
+                  << "Tracking:          " << durationTracking.count() << " ms\n"
+                  << "Total Time:        " << durationOverall.count() << " ms" << std::endl
+                  << std::endl;
     }
     catch (const std::exception &e)
     {
@@ -427,25 +459,25 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
                 cv::line(inputColorImage, {(int)p1.x, (int)p1.y}, {(int)p2.x, (int)p2.y}, CV_RGB(0, 255, 0), 2);
             }
         }
-        
+
         for (unsigned long j = 0; j < 21; j++)
         {
             float minZ = std::numeric_limits<float>::max();
             float maxZ = std::numeric_limits<float>::min();
 
             // Find the minimum and maximum z values
-            for (const auto& hand : trackF->hands)
+            for (const auto &hand : trackF->hands)
             {
-                for (const auto& landmark : hand.landmarks)
+                for (const auto &landmark : hand.landmarks)
                 {
                     minZ = std::min(minZ, landmark.z);
                     maxZ = std::max(maxZ, landmark.z);
                 }
             }
 
-            for (const auto& hand : trackF->hands)
+            for (const auto &hand : trackF->hands)
             {
-                for (const auto& landmark : hand.landmarks)
+                for (const auto &landmark : hand.landmarks)
                 {
                     // Normalize the z value
                     float normalizedZ = (landmark.z - minZ) / (maxZ - minZ);
@@ -474,21 +506,22 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
     }
 }
 
-
-
-glm::vec3 Tracker::getFilteredPoint(glm::vec3 point) 
+glm::vec3 Tracker::getFilteredPoint(glm::vec3 point)
 {
     glm::vec3 bestPoint = calculate3DPos(point.x * 2, point.y * 2, K4A_CALIBRATION_TYPE_COLOR);
     float minZ = bestPoint.z;
 
     // Iterate over a 3x3 grid centered on the original point
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dy = -1; dy <= 1; dy++) {
+    for (int dx = -1; dx <= 1; dx++)
+    {
+        for (int dy = -1; dy <= 1; dy++)
+        {
             if (dx == 0 && dy == 0)
                 continue; // Skip the center point since it's already considered
 
             glm::vec3 newPoint = calculate3DPos(point.x * 2 + dx, point.y * 2 + dy, K4A_CALIBRATION_TYPE_COLOR);
-            if (newPoint.z < minZ) {
+            if (newPoint.z < minZ)
+            {
                 minZ = newPoint.z;
                 bestPoint = newPoint;
             }
@@ -500,7 +533,7 @@ glm::vec3 Tracker::getFilteredPoint(glm::vec3 point)
 
 std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 {
-    if (!trackF->hands.empty())
+    if (trackF && !trackF->hands.empty())
     {
         std::vector<glm::vec3> landmarks;
 
@@ -511,14 +544,14 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 
         landmark = trackF->hands[0].landmarks[mp_hand_landmark_thumb_tip];
         // Correct for down sample
-        pos = getFilteredPoint(landmark);;
+        pos = getFilteredPoint(landmark);
+        ;
         landmarks.push_back(toScreenSpace(pos));
-        
-       
+
         if (glm::distance(landmarks[0], landmarks[1]) < 18.0f)
         {
             return landmarks;
-        } 
+        }
     }
 
     return {};
@@ -526,7 +559,7 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 
 std::optional<glm::vec3> Tracker::getLeftEyePos()
 {
-    if (trackF->faces.size() != 0)
+    if (trackF && trackF->faces.size() != 0)
     {
         // We don't need to div by 2 because we pyradown the image
         cv::Point eye = cv::Point(
@@ -540,7 +573,7 @@ std::optional<glm::vec3> Tracker::getLeftEyePos()
 
 std::optional<glm::vec3> Tracker::getRightEyePos()
 {
-    if (trackF->faces.size() != 0)
+    if (trackF && trackF->faces.size() != 0)
     {
         // We don't need to div by 2 because we pyradown the image
         cv::Point eye = cv::Point(

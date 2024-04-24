@@ -86,7 +86,7 @@ void Challenge::update()
     }
 }
 
-void Challenge::drawWith(Shader shader)
+void Challenge::draw()
 {
     renderer->drawPoint(segments.front().start, segments.front().radius * 3, 2);
     Segment lastSegment = Segment(glm::vec3(0), glm::vec3(0), 0);

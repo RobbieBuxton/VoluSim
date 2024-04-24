@@ -43,10 +43,6 @@ int main()
     GLuint pixelHeight = 2160;
     GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
 
-    // build and compile our shader zprogram
-    // ------------------------------------
-    Shader modelShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
-
     // Robbie's Screen
     // Depth is artifical the others are real
     GLfloat dWidth = 70.5f;
@@ -133,7 +129,7 @@ int main()
         hand->draw();
         
         challenge.update();
-        challenge.drawWith(modelShader);
+        challenge.draw();
 
         debugInfo.displayImage();
         colourCamera.displayImage();
