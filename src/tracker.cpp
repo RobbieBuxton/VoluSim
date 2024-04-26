@@ -149,6 +149,7 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
     // Rotation into the same basis as screenSpace
     toScreenSpaceMat = glm::rotate(glm::mat4(1.0f), glm::radians(yRot), glm::vec3(1.0f, 0.0f, 0.0f));
 
+    // Create a new tracking frame
     trackF = std::make_unique<TrackingFrame>();
 }
 
@@ -227,8 +228,7 @@ std::vector<glm::vec3> Tracker::getPointCloud()
 
 void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> cInst)
 {
-    std::unique_ptr<TrackingFrame> newTrackF = std::make_unique<TrackingFrame>();
-    newTrackF->cInst = std::move(cInst);
+    trackF->cInst = std::move(cInst);
     // Store the frame data in an image structure.
     mp_image image;
     image.data = inputColorImage.data;
@@ -255,30 +255,20 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
     // If face detected
     if (!dets.empty())
     {
-        for (int i = 0; i < (int)dets.size(); i++)
-        {
-            FaceLandmarks face;
-            face.box = {(int)(dets[i].rect.left() + dets[i].rect.right()) / 2,
-                        (int)(dets[i].rect.top() + dets[i].rect.bottom()) / 2,
-                        (int)(dets[i].rect.right() - dets[i].rect.left()),
-                        (int)(dets[i].rect.bottom() - dets[i].rect.top()),
-                        (float)0.0f};
+        std::unique_ptr<FaceLandmarks> face = std::make_unique<FaceLandmarks>();
 
-            dlib::full_object_detection detection = predictor(dlib_img, dets[i].rect);
-            for (int j = 0; j < 5; j++)
-            {
-                face.landmarks[j] = {detection.part(j).x(), detection.part(j).y()};
-            }
-            newTrackF->faces.push_back(face);
-        }
-    }
-    // Copy old face detection (assume hand occluding face)
-    else
-    {
-        for (int i = 0; i < trackF->faces.size(); i++)
+        face->box = {(int)(dets[0].rect.left() + dets[0].rect.right()) / 2,
+                     (int)(dets[0].rect.top() + dets[0].rect.bottom()) / 2,
+                     (int)(dets[0].rect.right() - dets[0].rect.left()),
+                     (int)(dets[0].rect.bottom() - dets[0].rect.top()),
+                     (float)0.0f};
+
+        dlib::full_object_detection detection = predictor(dlib_img, dets[0].rect);
+        for (int j = 0; j < 5; j++)
         {
-            newTrackF->faces.push_back(trackF->faces[i]);
+            face->landmarks[j] = {detection.part(j).x(), detection.part(j).y()};
         }
+        trackF->face = std::move(face);
     }
 
     // Wait until the image has been processed.
@@ -294,10 +284,10 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
         mp_packet *rects_packet = mp_poll_packet(rects_poller);
         mp_rect_list *rects = mp_get_norm_rects(rects_packet);
 
-        for (int i = 0; i < hand_landmarks_list->length; i++)
+        if (hand_landmarks_list->length > 0)
         {
-            mp_landmark_list &landmarks = hand_landmarks_list->elements[i];
-            HandLandmarks hand;
+            mp_landmark_list &landmarks = hand_landmarks_list->elements[0];
+            std::unique_ptr<HandLandmarks> hand = std::make_unique<HandLandmarks>();
             for (int j = 0; j < landmarks.length; j++)
             {
                 const mp_landmark &p = landmarks.elements[j];
@@ -306,29 +296,30 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
                 // Mediapipe scales z with x
                 float z = (float)inputColorImage.cols * p.z;
 
-                hand.landmarks[j] = {x, y, z};
+                hand->landmarks[j] = {x, y, z};
             }
 
-            const mp_rect &rect = rects->elements[i];
-            hand.box = {(int)(inputColorImage.cols * rect.x_center),
-                        (int)(inputColorImage.rows * rect.y_center),
-                        (int)(inputColorImage.cols * rect.width),
-                        (int)(inputColorImage.rows * rect.height),
-                        rect.rotation};
-            newTrackF->hands.push_back(hand);
+            const mp_rect &rect = rects->elements[0];
+            hand->box = {(int)(inputColorImage.cols * rect.x_center),
+                         (int)(inputColorImage.rows * rect.y_center),
+                         (int)(inputColorImage.cols * rect.width),
+                         (int)(inputColorImage.rows * rect.height),
+                         rect.rotation};
+            trackF->hand = std::move(hand);
         }
+
         mp_destroy_multi_face_landmarks(hand_landmarks_list);
         mp_destroy_packet(landmark_packet);
         mp_destroy_rects(rects);
         mp_destroy_packet(rects_packet);
     }
-    trackF = std::move(newTrackF);
 }
 
 void Tracker::update()
 {
     try
     {
+
         // Define time points and durations
         std::chrono::high_resolution_clock::time_point startOverall, stopOverall;
         std::chrono::high_resolution_clock::time_point start, stop;
@@ -395,6 +386,7 @@ void Tracker::update()
                   << "Tracking:          " << durationTracking.count() << " ms\n"
                   << "Total Time:        " << durationOverall.count() << " ms" << std::endl
                   << std::endl;
+
     }
     catch (const std::exception &e)
     {
@@ -427,35 +419,38 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
         {mp_hand_landmark_pinky_pip, mp_hand_landmark_pinky_dip},
         {mp_hand_landmark_pinky_dip, mp_hand_landmark_pinky_tip}};
 
-    // Draw Detected faceBoxs on output
-    for (unsigned long i = 0; i < trackF->faces.size(); i++)
+    if (!trackF)
     {
-        cv::Point2f center((float)trackF->faces[i].box.x, (float)trackF->faces[i].box.y);
-        cv::Point2f size((float)trackF->faces[i].box.width, (float)trackF->faces[i].box.height);
-        float rotation = (float)trackF->faces[i].box.rotation * (180.0f / (float)CV_PI);
+        return;
+    }
+
+    if (trackF->face)
+    {
+        cv::Point2f faceCenter((float)trackF->face->box.x, (float)trackF->face->box.y);
+        cv::Point2f faceSize((float)trackF->face->box.width, (float)trackF->face->box.height);
+        float faceRotation = (float)trackF->face->box.rotation * (180.0f / (float)CV_PI);
 
         // Draw hand bounding boxes as blue rectangles.
-        cv::Point2f vertices[4];
-        cv::RotatedRect(center, size, rotation).points(vertices);
+        cv::Point2f faceVertices[4];
+        cv::RotatedRect(faceCenter, faceSize, faceRotation).points(faceVertices);
         for (int j = 0; j < 4; j++)
         {
-            cv::line(inputColorImage, vertices[j], vertices[(j + 1) % 4], CV_RGB(0, 0, 255), 2);
+            cv::line(inputColorImage, faceVertices[j], faceVertices[(j + 1) % 4], CV_RGB(0, 0, 255), 2);
         }
         for (unsigned long j = 0; j < 5; j++)
         {
-            cv::circle(inputColorImage, cv::Point(trackF->faces[i].landmarks[j].x, trackF->faces[i].landmarks[j].y), 3, cv::Scalar(0, 0, 255), -1);
+            cv::circle(inputColorImage, cv::Point(trackF->face->landmarks[j].x, trackF->face->landmarks[j].y), 3, cv::Scalar(0, 0, 255), -1);
         }
     }
 
-    // Draw hand landmarks on output
-    for (unsigned long i = 0; i < trackF->hands.size(); i++)
+    if (trackF->hand)
     {
         for (unsigned long j = 0; j < 21; j++)
         {
             for (const auto &connection : CONNECTIONS)
             {
-                const glm::vec2 &p1 = trackF->hands[i].landmarks[connection[0]];
-                const glm::vec2 &p2 = trackF->hands[i].landmarks[connection[1]];
+                const glm::vec2 &p1 = trackF->hand->landmarks[connection[0]];
+                const glm::vec2 &p2 = trackF->hand->landmarks[connection[1]];
                 cv::line(inputColorImage, {(int)p1.x, (int)p1.y}, {(int)p2.x, (int)p2.y}, CV_RGB(0, 255, 0), 2);
             }
         }
@@ -466,42 +461,35 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
             float maxZ = std::numeric_limits<float>::min();
 
             // Find the minimum and maximum z values
-            for (const auto &hand : trackF->hands)
+
+            for (const auto &landmark : trackF->hand->landmarks)
             {
-                for (const auto &landmark : hand.landmarks)
-                {
-                    minZ = std::min(minZ, landmark.z);
-                    maxZ = std::max(maxZ, landmark.z);
-                }
+                minZ = std::min(minZ, landmark.z);
+                maxZ = std::max(maxZ, landmark.z);
             }
 
-            for (const auto &hand : trackF->hands)
+            for (const auto &landmark : trackF->hand->landmarks)
             {
-                for (const auto &landmark : hand.landmarks)
-                {
-                    // Normalize the z value
-                    float normalizedZ = (landmark.z - minZ) / (maxZ - minZ);
+                // Normalize the z value
+                float normalizedZ = (landmark.z - minZ) / (maxZ - minZ);
 
-                    // Calculate the color based on the normalized z value
-                    cv::Scalar color(0, 0, 255 * (1 - normalizedZ));
+                // Calculate the color based on the normalized z value
+                cv::Scalar color(0, 0, 255 * (1 - normalizedZ));
 
-                    cv::circle(inputColorImage, cv::Point(landmark.x, landmark.y), 5, color, -1);
-                }
+                cv::circle(inputColorImage, cv::Point(landmark.x, landmark.y), 5, color, -1);
             }
         }
-    }
-    for (unsigned long i = 0; i < trackF->hands.size(); i++)
-    {
-        cv::Point2f center((float)trackF->hands[i].box.x, (float)trackF->hands[i].box.y);
-        cv::Point2f size((float)trackF->hands[i].box.width, (float)trackF->hands[i].box.height);
-        float rotation = (float)trackF->hands[i].box.rotation * (180.0f / (float)CV_PI);
+
+        cv::Point2f handCenter((float)trackF->hand->box.x, (float)trackF->hand->box.y);
+        cv::Point2f handSize((float)trackF->hand->box.width, (float)trackF->hand->box.height);
+        float handRotation = (float)trackF->hand->box.rotation * (180.0f / (float)CV_PI);
 
         // Draw hand bounding boxes as blue rectangles.
-        cv::Point2f vertices[4];
-        cv::RotatedRect(center, size, rotation).points(vertices);
+        cv::Point2f handVertices[4];
+        cv::RotatedRect(handCenter, handSize, handRotation).points(handVertices);
         for (int j = 0; j < 4; j++)
         {
-            cv::line(inputColorImage, vertices[j], vertices[(j + 1) % 4], CV_RGB(0, 0, 255), 2);
+            cv::line(inputColorImage, handVertices[j], handVertices[(j + 1) % 4], CV_RGB(0, 0, 255), 2);
         }
     }
 }
@@ -533,16 +521,16 @@ glm::vec3 Tracker::getFilteredPoint(glm::vec3 point)
 
 std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 {
-    if (trackF && !trackF->hands.empty())
+    if (trackF && trackF->hand)
     {
         std::vector<glm::vec3> landmarks;
 
-        glm::vec3 landmark = trackF->hands[0].landmarks[mp_hand_landmark_index_finger_tip];
+        glm::vec3 landmark = trackF->hand->landmarks[mp_hand_landmark_index_finger_tip];
         // Correct for down sample
         glm::vec3 pos = getFilteredPoint(landmark);
         landmarks.push_back(toScreenSpace(pos));
 
-        landmark = trackF->hands[0].landmarks[mp_hand_landmark_thumb_tip];
+        landmark = trackF->hand->landmarks[mp_hand_landmark_thumb_tip];
         // Correct for down sample
         pos = getFilteredPoint(landmark);
         ;
@@ -559,13 +547,12 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 
 std::optional<glm::vec3> Tracker::getLeftEyePos()
 {
-    if (trackF && trackF->faces.size() != 0)
+    if (trackF && trackF->face)
     {
         // We don't need to div by 2 because we pyradown the image
         cv::Point eye = cv::Point(
-            trackF->faces[0].landmarks[0].x + trackF->faces[0].landmarks[1].x,
-            trackF->faces[0].landmarks[0].y + trackF->faces[0].landmarks[1].y);
-
+            trackF->face->landmarks[0].x + trackF->face->landmarks[1].x,
+            trackF->face->landmarks[0].y + trackF->face->landmarks[1].y);
         return toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR));
     }
     return {};
@@ -573,12 +560,12 @@ std::optional<glm::vec3> Tracker::getLeftEyePos()
 
 std::optional<glm::vec3> Tracker::getRightEyePos()
 {
-    if (trackF && trackF->faces.size() != 0)
+    if (trackF && trackF->face)
     {
         // We don't need to div by 2 because we pyradown the image
         cv::Point eye = cv::Point(
-            trackF->faces[0].landmarks[2].x + trackF->faces[0].landmarks[3].x,
-            trackF->faces[0].landmarks[2].y + trackF->faces[0].landmarks[3].y);
+            trackF->face->landmarks[2].x + trackF->face->landmarks[3].x,
+            trackF->face->landmarks[2].y + trackF->face->landmarks[3].y);
 
         return toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR));
     }

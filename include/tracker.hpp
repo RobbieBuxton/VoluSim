@@ -118,8 +118,8 @@ private:
     struct TrackingFrame
     {
         std::shared_ptr<Capture> cInst;
-        std::vector<FaceLandmarks> faces;
-        std::vector<HandLandmarks> hands;
+        std::unique_ptr<FaceLandmarks> face;
+        std::unique_ptr<HandLandmarks> hand;
     };
     std::unique_ptr<TrackingFrame> trackF;
 };
