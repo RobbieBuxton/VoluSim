@@ -59,6 +59,7 @@ int main()
 
     
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
+    std::thread captureThread(pollCapture, trackerPtr.get(), window);
 
     // render loop
     // -----------
@@ -160,7 +161,7 @@ int main()
         saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
     }
 
-    // hand.save(miscPath + "hand.csv");
+    hand->save(miscPath + "hand.csv");
     
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -262,6 +263,17 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
 
     return window;
 }
+
+void pollCapture(Tracker *trackerPtr, GLFWwindow *window)
+{
+    while (!glfwWindowShouldClose(window))
+    {
+        trackerPtr->getLatestCapture();
+        // Wait for 20ms as camera is 30fps
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+}
+
 
 void pollTracker(Tracker *trackerPtr, GLFWwindow *window)
 {

@@ -151,21 +151,24 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
 
     // Create a new tracking frame
     trackF = std::make_unique<TrackingFrame>();
+
+    // Make sure the capture is initialized 
+    getLatestCapture();
 }
 
-glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_type)
+glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_type, std::shared_ptr<Capture> capture)
 {
     uint16_t depth;
     if (source_type == K4A_CALIBRATION_TYPE_COLOR)
     {
-        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(trackF->cInst->colorSpace.depthImage));
-        int index = y * trackF->cInst->colorSpace.width + x;
+        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(capture->colorSpace.depthImage));
+        int index = y * capture->colorSpace.width + x;
         depth = depthBuffer[index];
     }
     else if (source_type == K4A_CALIBRATION_TYPE_DEPTH)
     {
-        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(trackF->cInst->depthSpace.depthImage));
-        int index = y * trackF->cInst->depthSpace.width + x;
+        uint16_t *depthBuffer = reinterpret_cast<uint16_t *>(k4a_image_get_buffer(capture->depthSpace.depthImage));
+        int index = y * capture->depthSpace.width + x;
         depth = depthBuffer[index];
     }
     else
@@ -193,7 +196,7 @@ glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_ty
 std::vector<glm::vec3> Tracker::getPointCloud()
 {
     std::vector<glm::vec3> pointCloud;
-    if ((trackF->cInst == nullptr) || (trackF->cInst->depthSpace.depthImage == NULL))
+    if ((trackF->debugCapture == nullptr) || (trackF->debugCapture->depthSpace.depthImage == NULL))
     {
         return pointCloud;
     }
@@ -201,17 +204,17 @@ std::vector<glm::vec3> Tracker::getPointCloud()
 
     // Create an image to hold the point cloud data
     k4a_image_create(K4A_IMAGE_FORMAT_CUSTOM,
-                     trackF->cInst->depthSpace.width,
-                     trackF->cInst->depthSpace.height,
-                     trackF->cInst->depthSpace.width * 3 * (int)sizeof(int16_t),
+                     trackF->debugCapture->depthSpace.width,
+                     trackF->debugCapture->depthSpace.height,
+                     trackF->debugCapture->depthSpace.width * 3 * (int)sizeof(int16_t),
                      &pointCloudImage);
 
     // Transform the depth image to a point cloud
-    k4a_transformation_depth_image_to_point_cloud(transformation, trackF->cInst->depthSpace.depthImage, K4A_CALIBRATION_TYPE_DEPTH, pointCloudImage);
+    k4a_transformation_depth_image_to_point_cloud(transformation, trackF->debugCapture->depthSpace.depthImage, K4A_CALIBRATION_TYPE_DEPTH, pointCloudImage);
 
     // Convert pointCloudImage to std::vector<glm::vec3>
     int16_t *pointCloudData = reinterpret_cast<int16_t *>(k4a_image_get_buffer(pointCloudImage));
-    for (int i = 0; i < trackF->cInst->depthSpace.width * trackF->cInst->depthSpace.height; ++i)
+    for (int i = 0; i < trackF->debugCapture->depthSpace.width * trackF->debugCapture->depthSpace.height; ++i)
     {
         int index = i * 3;
         float x = -static_cast<float>(pointCloudData[index]) / 10.0f;
@@ -226,9 +229,8 @@ std::vector<glm::vec3> Tracker::getPointCloud()
     return pointCloud;
 }
 
-void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> cInst)
-{
-    trackF->cInst = std::move(cInst);
+void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> capture)
+{    
     // Store the frame data in an image structure.
     mp_image image;
     image.data = inputColorImage.data;
@@ -268,6 +270,7 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
         {
             face->landmarks[j] = {detection.part(j).x(), detection.part(j).y()};
         }
+        face->capture = capture;
         trackF->face = std::move(face);
     }
 
@@ -305,6 +308,8 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
                          (int)(inputColorImage.cols * rect.width),
                          (int)(inputColorImage.rows * rect.height),
                          rect.rotation};
+            
+            hand->capture = capture;
             trackF->hand = std::move(hand);
         }
 
@@ -312,14 +317,32 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
         mp_destroy_packet(landmark_packet);
         mp_destroy_rects(rects);
         mp_destroy_packet(rects_packet);
+    } else {
+        trackF->hand = nullptr;
     }
+}
+
+
+
+void Tracker::getLatestCapture()
+{
+    while (true) {
+        try {
+            latestCapture = std::make_shared<Capture>(device, transformation);
+            return;
+        } catch (const std::exception &e) {
+            std::cout << "Failed to get latest capture" << std::endl;
+            // wait 1 millisecond
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+    
 }
 
 void Tracker::update()
 {
     try
     {
-
         // Define time points and durations
         std::chrono::high_resolution_clock::time_point startOverall, stopOverall;
         std::chrono::high_resolution_clock::time_point start, stop;
@@ -329,7 +352,8 @@ void Tracker::update()
 
         // Step 1: Capture Instance
         start = std::chrono::high_resolution_clock::now();
-        std::shared_ptr<Capture> cInst = std::make_shared<Capture>(device, transformation);
+        std::shared_ptr<Capture> capture = latestCapture;
+        trackF->debugCapture = latestCapture;
         stop = std::chrono::high_resolution_clock::now();
         durationCapture = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
@@ -337,7 +361,7 @@ void Tracker::update()
         start = std::chrono::high_resolution_clock::now();
 
         // Upload to GPU
-        cv::Mat bgraImage(cInst->colorSpace.height, cInst->colorSpace.width, CV_8UC4, k4a_image_get_buffer(cInst->colorSpace.colorImage), (size_t)k4a_image_get_stride_bytes(cInst->colorSpace.colorImage));
+        cv::Mat bgraImage(capture->colorSpace.height, capture->colorSpace.width, CV_8UC4, k4a_image_get_buffer(capture->colorSpace.colorImage), (size_t)k4a_image_get_stride_bytes(capture->colorSpace.colorImage));
         cv::cuda::GpuMat bgraImageGpu, bgrImageGpu;
         bgraImageGpu.upload(bgraImage);
 
@@ -356,10 +380,10 @@ void Tracker::update()
         start = std::chrono::high_resolution_clock::now();
         try
         {
-            createNewTrackingFrame(processedBgrImage, cInst);
+            createNewTrackingFrame(processedBgrImage, capture);
 
             // Normalize and map depth image (example of further processing)
-            cv::Mat dImage(trackF->cInst->colorSpace.height, trackF->cInst->colorSpace.width, CV_16U, k4a_image_get_buffer(trackF->cInst->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(trackF->cInst->colorSpace.depthImage));
+            cv::Mat dImage(trackF->debugCapture->colorSpace.height, trackF->debugCapture->colorSpace.width, CV_16U, k4a_image_get_buffer(trackF->debugCapture->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(trackF->debugCapture->colorSpace.depthImage));
             cv::Mat normalisedDImage, colorDepthImage;
             cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
             cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
@@ -494,9 +518,9 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
     }
 }
 
-glm::vec3 Tracker::getFilteredPoint(glm::vec3 point)
+glm::vec3 Tracker::getFilteredPoint(glm::vec3 point,std::shared_ptr<Capture> capture)
 {
-    glm::vec3 bestPoint = calculate3DPos(point.x * 2, point.y * 2, K4A_CALIBRATION_TYPE_COLOR);
+    glm::vec3 bestPoint = calculate3DPos(point.x * 2, point.y * 2, K4A_CALIBRATION_TYPE_COLOR, capture);
     float minZ = bestPoint.z;
 
     // Iterate over a 3x3 grid centered on the original point
@@ -507,7 +531,7 @@ glm::vec3 Tracker::getFilteredPoint(glm::vec3 point)
             if (dx == 0 && dy == 0)
                 continue; // Skip the center point since it's already considered
 
-            glm::vec3 newPoint = calculate3DPos(point.x * 2 + dx, point.y * 2 + dy, K4A_CALIBRATION_TYPE_COLOR);
+            glm::vec3 newPoint = calculate3DPos(point.x * 2 + dx, point.y * 2 + dy, K4A_CALIBRATION_TYPE_COLOR, capture);
             if (newPoint.z < minZ)
             {
                 minZ = newPoint.z;
@@ -527,13 +551,13 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 
         glm::vec3 landmark = trackF->hand->landmarks[mp_hand_landmark_index_finger_tip];
         // Correct for down sample
-        glm::vec3 pos = getFilteredPoint(landmark);
+        glm::vec3 pos = getFilteredPoint(landmark, trackF->hand->capture);
         landmarks.push_back(toScreenSpace(pos));
 
         landmark = trackF->hand->landmarks[mp_hand_landmark_thumb_tip];
         // Correct for down sample
-        pos = getFilteredPoint(landmark);
-        ;
+        pos = getFilteredPoint(landmark, trackF->hand->capture);
+        
         landmarks.push_back(toScreenSpace(pos));
 
         if (glm::distance(landmarks[0], landmarks[1]) < 18.0f)
@@ -553,7 +577,7 @@ std::optional<glm::vec3> Tracker::getLeftEyePos()
         cv::Point eye = cv::Point(
             trackF->face->landmarks[0].x + trackF->face->landmarks[1].x,
             trackF->face->landmarks[0].y + trackF->face->landmarks[1].y);
-        return toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR));
+        return toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR, trackF->face->capture));
     }
     return {};
 }
@@ -567,7 +591,7 @@ std::optional<glm::vec3> Tracker::getRightEyePos()
             trackF->face->landmarks[2].x + trackF->face->landmarks[3].x,
             trackF->face->landmarks[2].y + trackF->face->landmarks[3].y);
 
-        return toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR));
+        return toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR, trackF->face->capture));
     }
     return {};
 }

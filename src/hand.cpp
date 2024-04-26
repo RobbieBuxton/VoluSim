@@ -41,23 +41,22 @@ void Hand::draw()
     }
 }
 
-// void Hand::save(const std::string &filename)
-// {
-//     std::ofstream outFile(filename);
-//     if (!outFile.is_open())
-//     {
-//         std::cerr << "Error: Could not open file for writing: " << filename << std::endl;
-//         return;
-//     }
+void Hand::save(const std::string &filename)
+{
+    std::ofstream outFile(filename);
+    if (!outFile.is_open())
+    {
+        std::cerr << "Error: Could not open file for writing: " << filename << std::endl;
+        return;
+    }
 
-//     // Write the header
-//     outFile << "x, y, z\n";
+    // Write the header
+    outFile << "x, y, z\n";
 
-//     // Write the points
-//     for (const auto &point : landmarks)
-//     {
-//         outFile << point.x << ", " << point.y << ", " << point.z << "\n";
-//     }
-
-//     outFile.close();
-// }
+    // Write the points
+    
+    outFile << index.x << ", " << index.y << ", " << index.z << "\n";
+    outFile << thumb.x << ", " << thumb.y << ", " << thumb.z << "\n";
+    
+    outFile.close();
+}

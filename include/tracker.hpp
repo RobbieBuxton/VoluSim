@@ -44,7 +44,7 @@ public:
     cv::Mat getDepthImage();
     cv::Mat getColorImage();
     std::vector<glm::vec3> getPointCloud();
-
+    void getLatestCapture();
 private:
     class Capture
     {
@@ -72,10 +72,13 @@ private:
 
     void createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> cInst);
     void debugDraw(cv::Mat inputColorImage);
-    glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type);
+    glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type, std::shared_ptr<Capture> capture);
     glm::vec3 toScreenSpace(glm::vec3 pos);
-    glm::vec3 getFilteredPoint(glm::vec3 point);
+    glm::vec3 getFilteredPoint(glm::vec3 point, std::shared_ptr<Capture> capture);
     glm::vec3 cameraOffset;
+    
+
+    std::shared_ptr<Capture> latestCapture;
 
     k4a_device_t device;
     k4a_device_configuration_t config;
@@ -105,19 +108,21 @@ private:
 
     struct HandLandmarks
     {
+        std::shared_ptr<Capture> capture;
         glm::vec3 landmarks[21];
         Rectangle box;
     };
 
     struct FaceLandmarks
     {
+        std::shared_ptr<Capture> capture;
         glm::vec2 landmarks[5];
         Rectangle box;
     };
 
     struct TrackingFrame
     {
-        std::shared_ptr<Capture> cInst;
+        std::shared_ptr<Capture> debugCapture;
         std::unique_ptr<FaceLandmarks> face;
         std::unique_ptr<HandLandmarks> hand;
     };
