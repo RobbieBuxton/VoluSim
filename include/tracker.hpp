@@ -45,6 +45,7 @@ public:
     cv::Mat getColorImage();
     std::vector<glm::vec3> getPointCloud();
     void getLatestCapture();
+    
 private:
     class Capture
     {

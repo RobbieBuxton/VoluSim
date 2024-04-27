@@ -11,7 +11,7 @@ Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> h
 
     std::vector<glm::vec3> directions = loadDirections(FileSystem::getPath("data/challenges/demo1.txt"));
 
-    glm::vec3 point = glm::vec3(-12.5, 20.0, 20.0);
+    glm::vec3 point = glm::vec3(-10.0, 20.0, 25.0);
     glm::vec3 oldPoint;
 
     for (auto direction : directions)
@@ -29,13 +29,14 @@ std::vector<glm::vec3> Challenge::loadDirections(const std::string &path)
     std::string keyword;
 
     // Mapping of direction keywords to glm::vec3 vectors
+    float len = 4.0f; 
     std::unordered_map<std::string, glm::vec3> directionMap = {
-        {"up", glm::vec3(0.0, 5.0, 0.0)},
-        {"down", glm::vec3(0.0, -5.0, 0.0)},
-        {"forward", glm::vec3(0.0, 0.0, 5.0)},
-        {"back", glm::vec3(0.0, 0.0, -5.0)},
-        {"right", glm::vec3(5.0, 0.0, 0.0)},
-        {"left", glm::vec3(-5.0, 0.0, 0.0)}};
+        {"up", glm::vec3(0.0, len, 0.0)},
+        {"down", glm::vec3(0.0, -len, 0.0)},
+        {"forward", glm::vec3(0.0, 0.0, len)},
+        {"back", glm::vec3(0.0, 0.0, -len)},
+        {"right", glm::vec3(len, 0.0, 0.0)},
+        {"left", glm::vec3(-len, 0.0, 0.0)}};
 
     while (getline(file, keyword))
     {

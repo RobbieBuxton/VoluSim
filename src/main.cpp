@@ -57,7 +57,6 @@ int main()
 
     std::cout << "Finished Load" << std::endl;
 
-    
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
     std::thread captureThread(pollCapture, trackerPtr.get(), window);
 
@@ -88,29 +87,15 @@ int main()
         // Check if the eye position has changed
         glm::vec3 currentEyePos;
         std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
-        if (!leftEyePos.has_value())
-        {
-            currentEyePos = lastEyePos;
-        }
-        else
+        if (leftEyePos.has_value())
         {
             currentEyePos = leftEyePos.value();
         }
-        if (glm::length(currentEyePos - lastEyePos) > std::numeric_limits<float>::epsilon())
+        else
         {
-            // Eye position has changed
-            eyePosChangeCount++;
-            lastEyePos = currentEyePos; // Update the last eye position
+            currentEyePos = lastEyePos;
         }
-
-        if (currentTime - lastTime >= 1.0)
-        {
-            debugInfo.updateImage(generateDebugPrintBox(eyePosChangeCount));
-            nbFrames = 0;
-            lastTime += 1.0;
-            eyePosChangeCount = 0;
-        }
-
+        
         processInput(window);
         
         renderer->clear();
