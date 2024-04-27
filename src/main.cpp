@@ -43,10 +43,6 @@ int main()
     GLuint pixelHeight = 2160;
     GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
 
-    // build and compile our shader zprogram
-    // ------------------------------------
-    Shader modelShader(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
-
     // Robbie's Screen
     // Depth is artifical the others are real
     GLfloat dWidth = 70.5f;
@@ -61,8 +57,8 @@ int main()
 
     std::cout << "Finished Load" << std::endl;
 
-    
     std::thread trackerThread(pollTracker, trackerPtr.get(), window);
+    std::thread captureThread(pollCapture, trackerPtr.get(), window);
 
     // render loop
     // -----------
@@ -91,29 +87,15 @@ int main()
         // Check if the eye position has changed
         glm::vec3 currentEyePos;
         std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
-        if (!leftEyePos.has_value())
-        {
-            currentEyePos = lastEyePos;
-        }
-        else
+        if (leftEyePos.has_value())
         {
             currentEyePos = leftEyePos.value();
         }
-        if (glm::length(currentEyePos - lastEyePos) > std::numeric_limits<float>::epsilon())
+        else
         {
-            // Eye position has changed
-            eyePosChangeCount++;
-            lastEyePos = currentEyePos; // Update the last eye position
+            currentEyePos = lastEyePos;
         }
-
-        if (currentTime - lastTime >= 1.0)
-        {
-            debugInfo.updateImage(generateDebugPrintBox(eyePosChangeCount));
-            nbFrames = 0;
-            lastTime += 1.0;
-            eyePosChangeCount = 0;
-        }
-
+        
         processInput(window);
         
         renderer->clear();
@@ -133,7 +115,7 @@ int main()
         hand->draw();
         
         challenge.update();
-        challenge.drawWith(modelShader);
+        challenge.draw();
 
         debugInfo.displayImage();
         colourCamera.displayImage();
@@ -164,7 +146,7 @@ int main()
         saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
     }
 
-    // hand.save(miscPath + "hand.csv");
+    hand->save(miscPath + "hand.csv");
     
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -266,6 +248,17 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
 
     return window;
 }
+
+void pollCapture(Tracker *trackerPtr, GLFWwindow *window)
+{
+    while (!glfwWindowShouldClose(window))
+    {
+        trackerPtr->getLatestCapture();
+        // Wait for 20ms as camera is 30fps
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+}
+
 
 void pollTracker(Tracker *trackerPtr, GLFWwindow *window)
 {
