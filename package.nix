@@ -1,4 +1,4 @@
-{ pkgs, k4apkgs, tolHeader, libmediapipepkg }:
+{ pkgs, k4apkgs, tolHeader, jsonHeader,  libmediapipepkg }:
 {
   default = pkgs.cudaPackages.backendStdenv.mkDerivation {
     pname = "volumetricSim";
@@ -56,6 +56,7 @@
       in
       ''
         cp ${tolHeader} ./include/tiny_obj_loader.h
+        cp ${jsonHeader} ./include/json.hpp
         cd data
         cp ${faceLandmarksSrc} ./shape_predictor_5_face_landmarks.dat.bz2
         bzip2 -d ./shape_predictor_5_face_landmarks.dat.bz2
@@ -126,15 +127,15 @@
       in
       ''
         glad --api gl:core=`${openGLVersion}` --out-path ${gladBuildDir} --reproducible 
-        g++ ${
+        g++ -fPIC -shared ${
           pkgs.lib.strings.concatStringsSep " "
           (macros ++ flags ++ sources ++ libs ++ headers)
-        } -o volumetricSim
+        } -o libvolsim.so
       '';
 
     installPhase = ''
       mkdir -p $out/bin
-      cp volumetricSim $out/bin
+      cp libvolsim.so $out/bin
       cp -a data $out/data
     '';
   };

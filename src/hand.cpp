@@ -3,17 +3,18 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-Hand::Hand(std::shared_ptr<Renderer> renderer)
+Hand::Hand(std::shared_ptr<Renderer> renderer, glm::vec3 offset)
 {
     this->renderer = renderer;
+    this->offset = offset;
 }
 
 void Hand::updateLandmarks(std::optional<std::vector<glm::vec3>> inputLandmarks)
 {
     if (inputLandmarks.has_value())
     {
-        index = inputLandmarks.value()[0];
-        thumb = inputLandmarks.value()[1];
+        index = inputLandmarks.value()[0] + offset;
+        thumb = inputLandmarks.value()[1] + offset;
     }
 }
 

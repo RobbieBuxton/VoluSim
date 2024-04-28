@@ -23,135 +23,173 @@
 
 #include "main.hpp"
 #include "display.hpp"
-#include "tracker.hpp"
 #include "filesystem.hpp"
 #include "shader.hpp"
 #include "model.hpp"
-#include "image.hpp"
 #include "pointcloud.hpp"
-#include "hand.hpp"
 #include "challenge.hpp"
 #include "renderer.hpp"
 
-// The MAIN function, from here we start the application and run the game loop
-int main()
+extern "C"
 {
-    debugInitPrint();
-    GLuint maxPixelWidth = 3840;
-    GLuint maxPixelHeight = 2160;
-    GLuint pixelWidth = 3840;
-    GLuint pixelHeight = 2160;
-    GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
+    static std::string outputString;
 
-    // Robbie's Screen
-    // Depth is artifical the others are real
-    GLfloat dWidth = 70.5f;
-    GLfloat dHeight = 39.5f;
-    GLfloat dDepth = 0.01f;
-    GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
-    GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
-    Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, dDepth, 1.0f, 1000.0f);
-    std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
-
-    std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
-
-    std::cout << "Finished Load" << std::endl;
-
-    std::thread trackerThread(pollTracker, trackerPtr.get(), window);
-    std::thread captureThread(pollCapture, trackerPtr.get(), window);
-
-    // render loop
-    // -----------
-
-    Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
-    Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
-    Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
-
-    // Timing variables
-    double lastTime = glfwGetTime();
-    int nbFrames = 0;
-
-    glm::vec3 lastEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
-    // Initialize a counter for eye position changes
-    int eyePosChangeCount = 0;
-
-    
-    std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer);
-    Challenge challenge = Challenge(renderer, hand);
-
-    while (!glfwWindowShouldClose(window))
+    const char *runSimulation(Mode trackerMode, int challengeNum)
     {
-        // Measure speed
-        double currentTime = glfwGetTime();
-        nbFrames++;
-        // Check if the eye position has changed
-        glm::vec3 currentEyePos;
-        std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
-        if (leftEyePos.has_value())
+        debugInitPrint();
+        GLuint maxPixelWidth = 3840;
+        GLuint maxPixelHeight = 2160;
+        GLuint pixelWidth = 3840;
+        GLuint pixelHeight = 2160;
+        GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
+
+        // Robbie's Screen
+        // Depth is artifical the others are real
+        GLfloat dWidth = 70.5f;
+        GLfloat dHeight = 39.5f;
+        GLfloat dDepth = 0.01f;
+        GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
+        GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
+        Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, dDepth, 1.0f, 1000.0f);
+        std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
+        std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
+
+        std::thread trackerThread(pollTracker, trackerPtr.get(), window);
+        std::thread captureThread(pollCapture, trackerPtr.get(), window);
+
+        // render loop
+        // -----------
+
+        Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
+        Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
+        Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
+
+        // Timing variables
+        double lastTime = glfwGetTime();
+        int nbFrames = 0;
+
+        glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
+
+        std::shared_ptr<Hand> hand;
+        if (trackerMode == TRACKEROFFSET || trackerMode == STATIC)
         {
-            currentEyePos = leftEyePos.value();
-        }
-        else
-        {
-            currentEyePos = lastEyePos;
+            hand = std::make_shared<Hand>(renderer, glm::vec3(5.0f, 0.0f, 0.0f));
+        } else {
+            hand = std::make_shared<Hand>(renderer, glm::vec3(0.0f, 0.0f, 0.0f));
         }
         
-        processInput(window);
-        
-        renderer->clear();
-        renderer->updateEyePos(currentEyePos);
-        renderer->drawRoom();
+        Challenge challenge = Challenge(renderer, hand, challengeNum);
 
-        // Need to convert this to render with opengl rather than opencv
-        if (!trackerPtr->getColorImage().empty())
-            colourCamera.updateImage(trackerPtr->getColorImage());
-
-        if (!trackerPtr->getDepthImage().empty())
+        while (!glfwWindowShouldClose(window))
         {
-            depthCamera.updateImage(trackerPtr->getDepthImage());
+            // Measure speed
+            double currentTime = glfwGetTime();
+            // Check if the eye position has changed
+            if (trackerMode == TRACKER || trackerMode == TRACKEROFFSET)
+            {
+                std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
+                if (leftEyePos.has_value())
+                {
+                    nbFrames++;
+                    currentEyePos = leftEyePos.value();
+                }
+                else
+                {
+                    currentEyePos = currentEyePos;
+                }
+            } else if (trackerMode == STATIC)
+            {
+                currentEyePos = glm::vec3(-8.707056f, 21.150419f, 60.079052f);
+            }
+
+            if (currentTime - lastTime >= 1.0)
+            {
+                debugInfo.updateImage(generateDebugPrintBox(nbFrames));
+                nbFrames = 0;
+                lastTime += 1.0;
+            }
+
+            processInput(window);
+
+            renderer->clear();
+            renderer->updateEyePos(currentEyePos);
+            renderer->drawRoom();
+
+            // Need to convert this to render with opengl rather than opencv
+            if (!trackerPtr->getColorImage().empty())
+                colourCamera.updateImage(trackerPtr->getColorImage());
+
+            if (!trackerPtr->getDepthImage().empty())
+            {
+                depthCamera.updateImage(trackerPtr->getDepthImage());
+            }
+
+            hand->updateLandmarks(trackerPtr->getHandLandmarks());
+            hand->draw();
+
+            challenge.update();
+            challenge.draw();
+            if (challenge.isFinished())
+            {
+                glfwSetWindowShouldClose(window, true);
+            }
+
+            renderer->drawImage(debugInfo);
+            renderer->drawImage(colourCamera);
+            renderer->drawImage(depthCamera);
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
         }
+        trackerThread.join();
+        captureThread.join();
 
-        hand->updateLandmarks(trackerPtr->getHandLandmarks());
-        hand->draw();
-        
-        challenge.update();
-        challenge.draw();
+        saveDebugInfo(*trackerPtr, colourCamera, depthCamera, *hand);
 
-        debugInfo.displayImage();
-        colourCamera.displayImage();
-        depthCamera.displayImage();
+        std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/results/";
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        outputString = challenge.toJson();
+
+        // glfw: terminate, clearing all previously allocated GLFW resources.
+        // ------------------------------------------------------------------
+        glfwTerminate();
+        return outputString.c_str();
     }
-    trackerThread.join();
+}
 
+void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera, Image &depthCamera, Hand &hand)
+{
     std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
 
+    std::cout << "Saving data to " << miscPath << std::endl;
+
     PointCloud pointCloud = PointCloud();
-    pointCloud.updateCloud(trackerPtr->getPointCloud());
+    pointCloud.updateCloud(trackerPtr.getPointCloud());
+    std::cout << "Saving Point Cloud" << std::endl;
     pointCloud.save(miscPath + "pointCloud.csv");
+    std::cout << "Saving Colour Camera" << std::endl;
     colourCamera.save(miscPath + "colourImage.png");
+    std::cout << "Saving Depth Camera" << std::endl;
     depthCamera.save(miscPath + "depthImage.png");
 
-    std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
+    std::cout << "Saving Eye Pos Left" << std::endl;
+    std::optional<glm::vec3> leftEyePos = trackerPtr.getLeftEyePos();
     if (leftEyePos.has_value())
     {
         saveVec3ToCSV(leftEyePos.value(), miscPath + "leftEyePos.csv");
     }
 
-    std::optional<glm::vec3> rightEyePos = trackerPtr->getRightEyePos();
+    std::cout << "Saving Eye Pos Right" << std::endl;
+    std::optional<glm::vec3> rightEyePos = trackerPtr.getRightEyePos();
     if (rightEyePos.has_value())
     {
         saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
     }
 
-    hand->save(miscPath + "hand.csv");
-    
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
-    glfwTerminate();
-    return 0;
+    std::cout << "Saving Hand" << std::endl;
+    hand.save(miscPath + "hand.csv");
+
+    std::cout << "Data saved" << std::endl;
 }
 
 // This should be refactored/removed/done properly
@@ -174,16 +212,17 @@ void saveVec3ToCSV(const glm::vec3 &vec, const std::string &filename)
 
 cv::Mat generateDebugPrintBox(int fps)
 {
-    cv::Mat img = cv::Mat::zeros(500, 500, CV_8UC3);
-    img.setTo(cv::Scalar(255, 255, 255)); // Set the color to white
+    // Create a 500x500 image with 4 channels (RGBA), initially fully transparent
+    cv::Mat img = cv::Mat::zeros(500, 500, CV_8UC4);
 
     // Set the text parameters
     std::string text = "Camera FPS: " + std::to_string(fps);
-
     int fontFace = cv::FONT_HERSHEY_COMPLEX;
     double fontScale = 1.25;
     int thickness = 2;
-    cv::Scalar textColor(0, 0, 0); // Black color for the text
+    // Use white color for the text with full opacity
+    cv::Scalar textColor(255, 255, 255, 255);
+
     int baseline = 0;
 
     // Calculate the text size
@@ -199,6 +238,7 @@ cv::Mat generateDebugPrintBox(int fps)
     // Flip along the horizontal axis
     cv::flip(img, img, 0);
     cv::flip(img, img, 1);
+
     return img;
 }
 
@@ -258,7 +298,6 @@ void pollCapture(Tracker *trackerPtr, GLFWwindow *window)
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }
-
 
 void pollTracker(Tracker *trackerPtr, GLFWwindow *window)
 {

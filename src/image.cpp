@@ -11,8 +11,6 @@
 
 Image::Image(glm::vec2 topLeft, glm::vec2 bottomRight)
 {
-    shader = new Shader(FileSystem::getPath("data/shaders/image.vs").c_str(), FileSystem::getPath("data/shaders/image.fs").c_str());
-
     // Calculate positions from screen coordinates
     float vertices[] = {
         // positions          // texture coords
@@ -80,20 +78,6 @@ void Image::updateImage(const cv::Mat &image)
     return;
 }
 
-void Image::displayImage()
-{
-    shader->use();
-    glBindVertexArray(VAO);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    shader->setInt("textureMap", 0); // Ensure the shader uniform matches this texture unit
-
-    // Draw the quad
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-    // Unbind VAO (not always necessary, but it's a good practice)
-    glBindVertexArray(0);
-}
-
 void Image::save(const std::string& filename)
 {
     // Assume the image dimensions are known or stored within the class. If not, they need to be provided.
@@ -131,6 +115,5 @@ void Image::save(const std::string& filename)
 
 Image::~Image()
 {
-    delete shader;
     return;
 }

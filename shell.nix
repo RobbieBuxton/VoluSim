@@ -1,4 +1,4 @@
-{ pkgs, k4apkgs, tolHeader, libmediapipepkg }:
+{ pkgs, k4apkgs, tolHeader, jsonHeader, libmediapipepkg }:
 pkgs.mkShell {
   name = "volumetricSim";
 
@@ -53,6 +53,7 @@ pkgs.mkShell {
         builtins.toJSON vscodeCppConfig
       }' >> ${vscodeDir}/c_cpp_properties.json
       mkdir -p ${vscodeDir}/include && cp ${tolHeader} ./${vscodeDir}/include/tiny_obj_loader.h
+      cp ${jsonHeader} ./${vscodeDir}/include/json.hpp
       trap "rm ${vscodeDir} -rf;" exit 
     '';
 }

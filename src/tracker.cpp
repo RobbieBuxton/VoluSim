@@ -331,7 +331,6 @@ void Tracker::getLatestCapture()
             latestCapture = std::make_shared<Capture>(device, transformation);
             return;
         } catch (const std::exception &e) {
-            std::cout << "Failed to get latest capture" << std::endl;
             // wait 1 millisecond
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
@@ -405,11 +404,11 @@ void Tracker::update()
         durationOverall = std::chrono::duration_cast<std::chrono::milliseconds>(stopOverall - startOverall);
 
         // Print all durations at the end
-        std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
-                  << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
-                  << "Tracking:          " << durationTracking.count() << " ms\n"
-                  << "Total Time:        " << durationOverall.count() << " ms" << std::endl
-                  << std::endl;
+        // std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
+        //           << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
+        //           << "Tracking:          " << durationTracking.count() << " ms\n"
+        //           << "Total Time:        " << durationOverall.count() << " ms" << std::endl
+        //           << std::endl;
 
     }
     catch (const std::exception &e)
