@@ -1,6 +1,7 @@
 import ctypes
 import os
 import json
+from pymongo import MongoClient
 
 # Define the Mode enumeration in Python
 class Mode(ctypes.c_int):
@@ -19,8 +20,8 @@ handle.runSimulation.argtypes = [Mode, ctypes.c_int]
 handle.runSimulation.restype = ctypes.c_char_p
 
 # Example usage of the runSimulation function
-trackerMode = Mode.STATIC  # Change this as needed for different modes
-challengeNum = 1  # Example challenge number
+trackerMode = Mode.TRACKER  # Change this as needed for different modes
+challengeNum = 4  # Example challenge number
 
 # Call the function
 result = handle.runSimulation(trackerMode, challengeNum)
@@ -29,5 +30,13 @@ output = result.decode('utf-8')  # Decode the result from bytes to string
 # Convert the JSON string to a Python dictionary
 data = json.loads(output)
 
-# Print the JSON data nicely formatted
-print(json.dumps(data, indent=4))
+# Connect to MongoDB (ensure MongoDB is running and accessible)
+client = MongoClient('mongodb://localhost:27017/')
+db = client['simulation_results']
+collection = db['results']
+
+# Insert data into MongoDB
+insertion_result = collection.insert_one(data)
+
+# Print the MongoDB insertion result
+print('Data inserted with ID:', insertion_result.inserted_id)

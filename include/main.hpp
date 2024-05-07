@@ -8,7 +8,7 @@
 #include "image.hpp"
 #include "hand.hpp"
 #include <opencv2/core.hpp>
-
+#include "json.hpp"
 
 enum Mode
 {

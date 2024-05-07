@@ -7,6 +7,7 @@
 #include <dlib/image_processing/shape_predictor.h>
 #include <dlib/dnn.h>
 #include <optional>
+#include "json.hpp"
 
 #include "mediapipe.h"
 
@@ -45,7 +46,8 @@ public:
     cv::Mat getColorImage();
     std::vector<glm::vec3> getPointCloud();
     void getLatestCapture();
-    
+    nlohmann::json returnJson();
+
 private:
     class Capture
     {
@@ -68,7 +70,7 @@ private:
 
     private:
         k4a_capture_t capture = NULL;
-        int32_t timeout = 17;
+        int32_t timeout = K4A_WAIT_INFINITE;
     };
 
     void createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> cInst);
@@ -78,6 +80,7 @@ private:
     glm::vec3 getFilteredPoint(glm::vec3 point, std::shared_ptr<Capture> capture);
     glm::vec3 cameraOffset;
     
+	nlohmann::json jsonLog;
 
     std::shared_ptr<Capture> latestCapture;
 
@@ -112,6 +115,8 @@ private:
         std::shared_ptr<Capture> capture;
         glm::vec3 landmarks[21];
         Rectangle box;
+		std::optional<glm::vec3> cachedIndexFinger;
+		std::optional<glm::vec3> cachedThumb;
     };
 
     struct FaceLandmarks
@@ -119,11 +124,13 @@ private:
         std::shared_ptr<Capture> capture;
         glm::vec2 landmarks[5];
         Rectangle box;
+		std::optional<glm::vec3> cachedLeftEye;
+		std::optional<glm::vec3> cachedRightEye;
     };
 
     struct TrackingFrame
     {
-        std::shared_ptr<Capture> debugCapture;
+        std::shared_ptr<Capture> lastCapture;
         std::unique_ptr<FaceLandmarks> face;
         std::unique_ptr<HandLandmarks> hand;
     };

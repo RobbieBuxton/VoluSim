@@ -8,6 +8,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <memory>
+#include "json.hpp"
 
 class Challenge
 {
@@ -16,7 +17,7 @@ public:
     void draw();
     void update();
     bool isFinished();
-    std::string toJson();
+    nlohmann::json returnJson();
 private:
     class Segment
     {

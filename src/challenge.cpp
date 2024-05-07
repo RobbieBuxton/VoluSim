@@ -4,7 +4,6 @@
 #include <unordered_map>
 #include "filesystem.hpp"
 #include <iostream>
-#include "json.hpp"
 
 Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> hand, int challengeNum)
 {
@@ -131,7 +130,7 @@ void Challenge::draw()
     }
 }
 
-std::string Challenge::toJson()
+nlohmann::json Challenge::returnJson()
 {
     nlohmann::json jsonOutput;
     for (int i = 0; i < segments.size(); i++)
@@ -140,9 +139,7 @@ std::string Challenge::toJson()
         jsonOutput.push_back({{"index", i},
                               {"completedTime", segment.completedTime.count()}});
     }
-
-    // Serialize JSON to string
-    return jsonOutput.dump();
+		return jsonOutput;
 }
 
 Challenge::Segment::Segment(glm::vec3 start, glm::vec3 end, float radius)

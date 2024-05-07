@@ -32,340 +32,354 @@
 
 extern "C"
 {
-    static std::string outputString;
+	static std::string outputString;
 
-    const char *runSimulation(Mode trackerMode, int challengeNum)
-    {
-        debugInitPrint();
-        GLuint maxPixelWidth = 3840;
-        GLuint maxPixelHeight = 2160;
-        GLuint pixelWidth = 3840;
-        GLuint pixelHeight = 2160;
-        GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
+	const char *runSimulation(Mode trackerMode, int challengeNum)
+	{
+		debugInitPrint();
+		GLuint maxPixelWidth = 3840;
+		GLuint maxPixelHeight = 2160;
+		GLuint pixelWidth = 3840;
+		GLuint pixelHeight = 2160;
+		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
 
-        // Robbie's Screen
-        // Depth is artifical the others are real
-        GLfloat dWidth = 70.5f;
-        GLfloat dHeight = 39.5f;
-        GLfloat dDepth = 0.01f;
-        GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
-        GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
-        Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, dDepth, 1.0f, 1000.0f);
-        std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
-        std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
+		// Robbie's Screen
+		// Depth is artifical the others are real
+		GLfloat dWidth = 70.5f;
+		GLfloat dHeight = 39.5f;
+		GLfloat dDepth = 0.01f;
+		GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
+		GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
+		Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, dDepth, 1.0f, 1000.0f);
+		std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
+		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
 
-        std::thread trackerThread(pollTracker, trackerPtr.get(), window);
-        std::thread captureThread(pollCapture, trackerPtr.get(), window);
+		std::thread trackerThread(pollTracker, trackerPtr.get(), window);
+		std::thread captureThread(pollCapture, trackerPtr.get(), window);
 
-        // render loop
-        // -----------
+		// render loop
+		// -----------
 
-        Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
-        Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
-        Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
+		Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
+		Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
+		Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
 
-        // Timing variables
-        double lastTime = glfwGetTime();
-        int nbFrames = 0;
+		// Timing variables
+		double lastTime = glfwGetTime();
+		int nbFrames = 0;
 
-        glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
+		glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-        std::shared_ptr<Hand> hand;
-        if (trackerMode == TRACKEROFFSET || trackerMode == STATIC)
-        {
-            hand = std::make_shared<Hand>(renderer, glm::vec3(5.0f, 0.0f, 0.0f));
-        } else {
-            hand = std::make_shared<Hand>(renderer, glm::vec3(0.0f, 0.0f, 0.0f));
-        }
-        
-        Challenge challenge = Challenge(renderer, hand, challengeNum);
+		std::shared_ptr<Hand> hand;
+		if (trackerMode == TRACKEROFFSET || trackerMode == STATIC)
+		{
+			hand = std::make_shared<Hand>(renderer, glm::vec3(5.0f, 0.0f, 0.0f));
+		}
+		else
+		{
+			hand = std::make_shared<Hand>(renderer, glm::vec3(0.0f, 0.0f, 0.0f));
+		}
+		nlohmann::json jsonOutput;
+		// Get current time in milliseconds
+		auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch())
+			.count();
 
-        while (!glfwWindowShouldClose(window))
-        {
-            // Measure speed
-            double currentTime = glfwGetTime();
-            // Check if the eye position has changed
-            if (trackerMode == TRACKER || trackerMode == TRACKEROFFSET)
-            {
-                std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
-                if (leftEyePos.has_value())
-                {
-                    nbFrames++;
-                    currentEyePos = leftEyePos.value();
-                }
-                else
-                {
-                    currentEyePos = currentEyePos;
-                }
-            } else if (trackerMode == STATIC)
-            {
-                currentEyePos = glm::vec3(-8.707056f, 21.150419f, 60.079052f);
-            }
+		// Assign the time to the "startTime" key in the JSON object
+		jsonOutput["startTime"] = currentTimeInMilliseconds;
 
-            if (currentTime - lastTime >= 1.0)
-            {
-                debugInfo.updateImage(generateDebugPrintBox(nbFrames));
-                nbFrames = 0;
-                lastTime += 1.0;
-            }
+		Challenge challenge = Challenge(renderer, hand, challengeNum);
 
-            processInput(window);
+		while (!glfwWindowShouldClose(window))
+		{
+			// Measure speed
+			double currentTime = glfwGetTime();
+			// Check if the eye position has changed
+			if (trackerMode == TRACKER || trackerMode == TRACKEROFFSET)
+			{
+				std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
+				if (leftEyePos.has_value())
+				{
+					nbFrames++;
+					currentEyePos = leftEyePos.value();
+				}
+				else
+				{
+					currentEyePos = currentEyePos;
+				}
+			}
+			else if (trackerMode == STATIC)
+			{
+				currentEyePos = glm::vec3(-8.707056f, 21.150419f, 60.079052f);
+			}
 
-            renderer->clear();
-            renderer->updateEyePos(currentEyePos);
-            renderer->drawRoom();
+			if (currentTime - lastTime >= 1.0)
+			{
+				debugInfo.updateImage(generateDebugPrintBox(nbFrames));
+				nbFrames = 0;
+				lastTime += 1.0;
+			}
 
-            // Need to convert this to render with opengl rather than opencv
-            if (!trackerPtr->getColorImage().empty())
-                colourCamera.updateImage(trackerPtr->getColorImage());
+			processInput(window);
 
-            if (!trackerPtr->getDepthImage().empty())
-            {
-                depthCamera.updateImage(trackerPtr->getDepthImage());
-            }
+			renderer->clear();
+			renderer->updateEyePos(currentEyePos);
+			renderer->drawRoom();
 
-            hand->updateLandmarks(trackerPtr->getHandLandmarks());
-            hand->draw();
+			// Need to convert this to render with opengl rather than opencv
+			if (!trackerPtr->getColorImage().empty())
+				colourCamera.updateImage(trackerPtr->getColorImage());
 
-            challenge.update();
-            challenge.draw();
-            if (challenge.isFinished())
-            {
-                glfwSetWindowShouldClose(window, true);
-            }
+			if (!trackerPtr->getDepthImage().empty())
+			{
+				depthCamera.updateImage(trackerPtr->getDepthImage());
+			}
 
-            renderer->drawImage(debugInfo);
-            renderer->drawImage(colourCamera);
-            renderer->drawImage(depthCamera);
+			hand->updateLandmarks(trackerPtr->getHandLandmarks());
+			hand->draw();
 
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-        }
-        trackerThread.join();
-        captureThread.join();
+			challenge.update();
+			challenge.draw();
+			if (challenge.isFinished())
+			{
+				glfwSetWindowShouldClose(window, true);
+			}
 
-        saveDebugInfo(*trackerPtr, colourCamera, depthCamera, *hand);
+			renderer->drawImage(debugInfo);
+			renderer->drawImage(colourCamera);
+			renderer->drawImage(depthCamera);
 
-        std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/results/";
+			glfwSwapBuffers(window);
+			glfwPollEvents();
+		}
+		trackerThread.join();
+		captureThread.join();
 
-        outputString = challenge.toJson();
+		saveDebugInfo(*trackerPtr, colourCamera, depthCamera, *hand);
 
-        // glfw: terminate, clearing all previously allocated GLFW resources.
-        // ------------------------------------------------------------------
-        glfwTerminate();
-        return outputString.c_str();
-    }
+		std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/results/";
+
+		jsonOutput["results"] = challenge.returnJson();
+		jsonOutput["trackerLogs"] = trackerPtr->returnJson();
+
+		outputString = jsonOutput.dump();
+
+		// glfw: terminate, clearing all previously allocated GLFW resources.
+		// ------------------------------------------------------------------
+		glfwTerminate();
+		return outputString.c_str();
+	}
 }
 
 void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera, Image &depthCamera, Hand &hand)
 {
-    std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
+	std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
 
-    std::cout << "Saving data to " << miscPath << std::endl;
+	std::cout << "Saving data to " << miscPath << std::endl;
 
-    PointCloud pointCloud = PointCloud();
-    pointCloud.updateCloud(trackerPtr.getPointCloud());
-    std::cout << "Saving Point Cloud" << std::endl;
-    pointCloud.save(miscPath + "pointCloud.csv");
-    std::cout << "Saving Colour Camera" << std::endl;
-    colourCamera.save(miscPath + "colourImage.png");
-    std::cout << "Saving Depth Camera" << std::endl;
-    depthCamera.save(miscPath + "depthImage.png");
+	PointCloud pointCloud = PointCloud();
+	pointCloud.updateCloud(trackerPtr.getPointCloud());
+	std::cout << "Saving Point Cloud" << std::endl;
+	pointCloud.save(miscPath + "pointCloud.csv");
+	std::cout << "Saving Colour Camera" << std::endl;
+	colourCamera.save(miscPath + "colourImage.png");
+	std::cout << "Saving Depth Camera" << std::endl;
+	depthCamera.save(miscPath + "depthImage.png");
 
-    std::cout << "Saving Eye Pos Left" << std::endl;
-    std::optional<glm::vec3> leftEyePos = trackerPtr.getLeftEyePos();
-    if (leftEyePos.has_value())
-    {
-        saveVec3ToCSV(leftEyePos.value(), miscPath + "leftEyePos.csv");
-    }
+	std::cout << "Saving Eye Pos Left" << std::endl;
+	std::optional<glm::vec3> leftEyePos = trackerPtr.getLeftEyePos();
+	if (leftEyePos.has_value())
+	{
+		saveVec3ToCSV(leftEyePos.value(), miscPath + "leftEyePos.csv");
+	}
 
-    std::cout << "Saving Eye Pos Right" << std::endl;
-    std::optional<glm::vec3> rightEyePos = trackerPtr.getRightEyePos();
-    if (rightEyePos.has_value())
-    {
-        saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
-    }
+	std::cout << "Saving Eye Pos Right" << std::endl;
+	std::optional<glm::vec3> rightEyePos = trackerPtr.getRightEyePos();
+	if (rightEyePos.has_value())
+	{
+		saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
+	}
 
-    std::cout << "Saving Hand" << std::endl;
-    hand.save(miscPath + "hand.csv");
+	std::cout << "Saving Hand" << std::endl;
+	hand.save(miscPath + "hand.csv");
 
-    std::cout << "Data saved" << std::endl;
+	std::cout << "Data saved" << std::endl;
 }
 
 // This should be refactored/removed/done properly
 void saveVec3ToCSV(const glm::vec3 &vec, const std::string &filename)
 {
-    std::ofstream file(filename);
+	std::ofstream file(filename);
 
-    if (file.is_open())
-    {
-        // Write the glm::vec3 components to the file separated by commas
-        file << vec.x << "," << vec.y << "," << vec.z << std::endl;
-        file.close();
-    }
-    else
-    {
-        // Handle error
-        std::cerr << "Unable to open file: " << filename << std::endl;
-    }
+	if (file.is_open())
+	{
+		// Write the glm::vec3 components to the file separated by commas
+		file << vec.x << "," << vec.y << "," << vec.z << std::endl;
+		file.close();
+	}
+	else
+	{
+		// Handle error
+		std::cerr << "Unable to open file: " << filename << std::endl;
+	}
 }
 
 cv::Mat generateDebugPrintBox(int fps)
 {
-    // Create a 500x500 image with 4 channels (RGBA), initially fully transparent
-    cv::Mat img = cv::Mat::zeros(500, 500, CV_8UC4);
+	// Create a 500x500 image with 4 channels (RGBA), initially fully transparent
+	cv::Mat img = cv::Mat::zeros(500, 500, CV_8UC4);
 
-    // Set the text parameters
-    std::string text = "Camera FPS: " + std::to_string(fps);
-    int fontFace = cv::FONT_HERSHEY_COMPLEX;
-    double fontScale = 1.25;
-    int thickness = 2;
-    // Use white color for the text with full opacity
-    cv::Scalar textColor(255, 255, 255, 255);
+	// Set the text parameters
+	std::string text = "Camera FPS: " + std::to_string(fps);
+	int fontFace = cv::FONT_HERSHEY_COMPLEX;
+	double fontScale = 1.25;
+	int thickness = 2;
+	// Use white color for the text with full opacity
+	cv::Scalar textColor(255, 255, 255, 255);
 
-    int baseline = 0;
+	int baseline = 0;
 
-    // Calculate the text size
-    cv::Size textSize = cv::getTextSize(text, fontFace, fontScale, thickness, &baseline);
-    baseline += thickness;
+	// Calculate the text size
+	cv::Size textSize = cv::getTextSize(text, fontFace, fontScale, thickness, &baseline);
+	baseline += thickness;
 
-    // Center the text
-    cv::Point textOrg((img.cols - textSize.width) / 2, (img.rows + textSize.height) / 2);
+	// Center the text
+	cv::Point textOrg((img.cols - textSize.width) / 2, (img.rows + textSize.height) / 2);
 
-    // Put the text on the image
-    cv::putText(img, text, textOrg, fontFace, fontScale, textColor, thickness);
+	// Put the text on the image
+	cv::putText(img, text, textOrg, fontFace, fontScale, textColor, thickness);
 
-    // Flip along the horizontal axis
-    cv::flip(img, img, 0);
-    cv::flip(img, img, 1);
+	// Flip along the horizontal axis
+	cv::flip(img, img, 0);
+	cv::flip(img, img, 1);
 
-    return img;
+	return img;
 }
 
 GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
 {
-    std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
-    // Init GLFW
-    glfwInit();
-    // Set all the required options for GLFW
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+	std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
+	// Init GLFW
+	glfwInit();
+	// Set all the required options for GLFW
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    // Create a GLFWwindow object that we can use for GLFW's functions
-    GLFWwindow *window = glfwCreateWindow(pixelWidth, pixelHeight, "LearnOpenGL", NULL, NULL);
-    glfwMakeContextCurrent(window);
-    if (window == NULL)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+	// Create a GLFWwindow object that we can use for GLFW's functions
+	GLFWwindow *window = glfwCreateWindow(pixelWidth, pixelHeight, "LearnOpenGL", NULL, NULL);
+	glfwMakeContextCurrent(window);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		exit(EXIT_FAILURE);
+	}
+	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-    // tell GLFW to capture our mouse
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	// tell GLFW to capture our mouse
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // Load OpenGL functions, gladLoadGL returns the loaded version, 0 on error.
-    int version = gladLoadGL(glfwGetProcAddress);
-    if (version == 0)
-    {
-        std::cout << "Failed to initialize OpenGL context" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+	// Load OpenGL functions, gladLoadGL returns the loaded version, 0 on error.
+	int version = gladLoadGL(glfwGetProcAddress);
+	if (version == 0)
+	{
+		std::cout << "Failed to initialize OpenGL context" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 
-    // Successfully loaded OpenGL
-    std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << "." << GLAD_VERSION_MINOR(version) << std::endl;
+	// Successfully loaded OpenGL
+	std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << "." << GLAD_VERSION_MINOR(version) << std::endl;
 
-    // Define the viewport dimensions
-    glViewport(0, 0, pixelWidth, pixelHeight);
+	// Define the viewport dimensions
+	glViewport(0, 0, pixelWidth, pixelHeight);
 
-    // configure global opengl state
-    // -----------------------------
-    glEnable(GL_DEPTH_TEST);
+	// configure global opengl state
+	// -----------------------------
+	glEnable(GL_DEPTH_TEST);
 
-    return window;
+	return window;
 }
 
 void pollCapture(Tracker *trackerPtr, GLFWwindow *window)
 {
-    while (!glfwWindowShouldClose(window))
-    {
-        trackerPtr->getLatestCapture();
-        // Wait for 20ms as camera is 30fps
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
+	while (!glfwWindowShouldClose(window))
+	{
+		trackerPtr->getLatestCapture();
+		// Wait for 20ms as camera is 30fps
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
 }
 
 void pollTracker(Tracker *trackerPtr, GLFWwindow *window)
 {
-    while (!glfwWindowShouldClose(window))
-    {
-        try
-        {
-            trackerPtr->update();
-        }
-        catch (const std::exception &e)
-        {
-            std::cout << e.what() << '\n';
-        }
-    }
+	while (!glfwWindowShouldClose(window))
+	{
+		try
+		{
+			trackerPtr->update();
+		}
+		catch (const std::exception &e)
+		{
+			std::cout << e.what() << '\n';
+		}
+	}
 }
 
 void processInput(GLFWwindow *window)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
 void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
-    // make sure the viewport matches the new window dimensions; note that width and
-    // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
+	// make sure the viewport matches the new window dimensions; note that width and
+	// height will be significantly larger than specified on retina displays.
+	glViewport(0, 0, width, height);
 }
 
 void debugInitPrint()
 {
 #ifdef DLIB_USE_CUDA
-    std::cout << "Dlib is compiled with CUDA support." << std::endl;
+	std::cout << "Dlib is compiled with CUDA support." << std::endl;
 #endif
 #ifdef DLIB_USE_FFTW
-    std::cout << "Dlib is compiled with FFTW support." << std::endl;
+	std::cout << "Dlib is compiled with FFTW support." << std::endl;
 #endif
 #ifdef DLIB_USE_BLAS
-    std::cout << "Dlib is compiled with BLAS support." << std::endl;
+	std::cout << "Dlib is compiled with BLAS support." << std::endl;
 #endif
 #ifdef DLIB_USE_LAPACK
-    std::cout << "Dlib is compiled with LAPACK support." << std::endl;
+	std::cout << "Dlib is compiled with LAPACK support." << std::endl;
 #endif
 
 #ifdef __AVX__
-    std::cout << "AVX on" << std::endl;
+	std::cout << "AVX on" << std::endl;
 #endif
 #ifdef DLIB_HAVE_SSE2
-    std::cout << "DLIB_HAVE_SSE2 on" << std::endl;
+	std::cout << "DLIB_HAVE_SSE2 on" << std::endl;
 #endif
 #ifdef DLIB_HAVE_SSE3
-    std::cout << "DLIB_HAVE_SSE3 on" << std::endl;
+	std::cout << "DLIB_HAVE_SSE3 on" << std::endl;
 #endif
 #ifdef DLIB_HAVE_SSE41
-    std::cout << "DLIB_HAVE_SSE41 on" << std::endl;
+	std::cout << "DLIB_HAVE_SSE41 on" << std::endl;
 #endif
 #ifdef DLIB_HAVE_AVX
-    std::cout << "DLIB_HAVE_AVX on" << std::endl;
+	std::cout << "DLIB_HAVE_AVX on" << std::endl;
 #endif
 
-    int num_devices = cv::cuda::getCudaEnabledDeviceCount();
-    std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
+	int num_devices = cv::cuda::getCudaEnabledDeviceCount();
+	std::cout << "Number of OpenCV CUDA devices detected: " << num_devices << std::endl;
 
-    if (geteuid() != 0)
-    {
-        std::cout << "ERROR: Application needs root to be able to use Tracker" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+	if (geteuid() != 0)
+	{
+		std::cout << "ERROR: Application needs root to be able to use Tracker" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 }
