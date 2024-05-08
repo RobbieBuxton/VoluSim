@@ -27,7 +27,7 @@
       libmediapipepkg = libmediapipe.packages.${system}.default;
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [ (import ./overlays.nix) ];
+        overlays = [ (import ./nix/overlays/overlays.nix) ];
         config.cudaSupport = true;
         config.allowUnfree = true;
       };
@@ -36,16 +36,16 @@
       # Development shell used by running "nix develop".
       # It will configure vscode settings for finding the correct c++ libs for Intellisense
       devShells.${system} = {
-        default = import ./shell.nix {
+        default = import ./nix/shells/dev-shell.nix {
           inherit pkgs k4apkgs tolHeader jsonHeader libmediapipepkg;
         };
 
-        start-mongodb = import ./mongodb-shell.nix {
+        start-mongodb = import ./nix/shells/mongodb-shell.nix {
           inherit pkgs;
         };
       };
       # The volumetric screen simulation package
-      packages.${system} = pkgs.callPackage ./package.nix {
+      packages.${system} = pkgs.callPackage ./nix/packages/package.nix {
         inherit pkgs k4apkgs tolHeader jsonHeader libmediapipepkg;
       };
     };

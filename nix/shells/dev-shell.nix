@@ -7,7 +7,6 @@ pkgs.mkShell {
     python311Packages.pyvista
     python311Packages.pymongo
     python311Packages.glad2
-    mongodb-compass
     glxinfo
     killall
     jq

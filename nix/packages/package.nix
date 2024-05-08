@@ -6,7 +6,7 @@
 
     enableParallelBuilding = true;
 
-    src = ./.;
+    src = ../../volsim;
 
     nativeBuildInputs = with pkgs; [
       python310Packages.glad2
@@ -55,6 +55,8 @@
         };
       in
       ''
+        pwd
+        ls
         cp ${tolHeader} ./include/tiny_obj_loader.h
         cp ${jsonHeader} ./include/json.hpp
         cd data

@@ -4,21 +4,26 @@ pkgs.mkShell {
 
   packages = with pkgs; [   
     mongodb
+    mongodb-compass
   ];
 
   shellHook =
+  let
+    databasePath = ''$(pwd)/userstudy/database'';
+  in 
     ''
-    export PS1="\e[0;31m[\u@\h \W]\$ \e[m "
+    export PS1="\e[0;34m[\u@\h \W]\$ \e[m"
     echo "Starting MongoDB with data directory in the current working directory..."
     # Make sure the database directory exists
-    mkdir -p $(pwd)/database
+    mkdir -p ${databasePath}
     # Start mongod as a background process
-    mongod --dbpath $(pwd)/database --fork --logpath $(pwd)/mongodb.log
+    mongod --dbpath ${databasePath} --fork --logpath $(pwd)/mongodb.log
 
     # Trap the EXIT signal to cleanup on shell exit
-    trap 'echo "Shutting down MongoDB..."; mongod --shutdown --dbpath $(pwd)/database' EXIT
+    trap 'echo "Shutting down MongoDB..."; mongod --shutdown --dbpath ${databasePath} ' EXIT
 
     echo "MongoDB started. Use mongo to connect. close the shell to stop the database."
+    mongodb-compass
     '';
 }
 
