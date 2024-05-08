@@ -3,8 +3,7 @@ pkgs.mkShell {
   name = "mongodb-shell";
 
   packages = with pkgs; [   
-    mongodb
-    mongodb-compass
+    python311Packages.pymongo
   ];
 
   shellHook =
@@ -23,6 +22,7 @@ pkgs.mkShell {
     trap 'echo "Shutting down MongoDB..."; mongod --shutdown --dbpath ${databasePath} ' EXIT
 
     echo "MongoDB started. Use mongo to connect. close the shell to stop the database."
+    
     mongodb-compass
     '';
 }

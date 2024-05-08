@@ -43,6 +43,10 @@
         start-mongodb = import ./nix/shells/mongodb-shell.nix {
           inherit pkgs;
         };
+
+        userstudy = import ./nix/shells/userstudy-shell.nix {
+          inherit pkgs;
+        };
       };
       # The volumetric screen simulation package
       packages.${system} = pkgs.callPackage ./nix/packages/package.nix {
