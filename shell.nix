@@ -7,6 +7,7 @@ pkgs.mkShell {
     python311Packages.pyvista
     python311Packages.pymongo
     python311Packages.glad2
+    mongodb-compass
     glxinfo
     killall
     jq
@@ -53,8 +54,11 @@ pkgs.mkShell {
       jq --indent 4 -n '${
         builtins.toJSON vscodeCppConfig
       }' >> ${vscodeDir}/c_cpp_properties.json
-      mkdir -p ${vscodeDir}/include && cp ${tolHeader} ./${vscodeDir}/include/tiny_obj_loader.h
-      cp ${jsonHeader} ./${vscodeDir}/include/json.hpp
+      mkdir -p ${vscodeDir}/include
+      cp -f ${tolHeader} ./${vscodeDir}/include/tiny_obj_loader.h
+      cp -f ${jsonHeader} ./${vscodeDir}/include/json.hpp
       trap "rm ${vscodeDir} -rf;" exit 
     '';
 }
+
+# sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH python3 scripts/pymongo_test_insert.py

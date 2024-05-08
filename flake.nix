@@ -35,10 +35,15 @@
     {
       # Development shell used by running "nix develop".
       # It will configure vscode settings for finding the correct c++ libs for Intellisense
-      devShells.${system}.default = import ./shell.nix {
-        inherit pkgs k4apkgs tolHeader jsonHeader libmediapipepkg;
-      };
+      devShells.${system} = {
+        default = import ./shell.nix {
+          inherit pkgs k4apkgs tolHeader jsonHeader libmediapipepkg;
+        };
 
+        start-mongodb = import ./mongodb-shell.nix {
+          inherit pkgs;
+        };
+      };
       # The volumetric screen simulation package
       packages.${system} = pkgs.callPackage ./package.nix {
         inherit pkgs k4apkgs tolHeader jsonHeader libmediapipepkg;
