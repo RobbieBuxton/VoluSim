@@ -13,7 +13,7 @@ pkgs.mkShell {
 
     # Define a function to run your Python script
     function userstudy() {
-      sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH python3 userstudy/user_study.py
+      sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH python3 userstudy/user_study.py "$@"
     }
 
     echo "Type 'userstudy' to start the user study application."

@@ -4,6 +4,8 @@ pkgs.mkShell {
 
   packages = with pkgs; [   
     python311Packages.pymongo
+    mongodb
+    mongodb-compass
   ];
 
   shellHook =
@@ -13,12 +15,11 @@ pkgs.mkShell {
     ''
     export PS1="\e[0;34m[\u@\h \W]\$ \e[m"
     echo "Starting MongoDB with data directory in the current working directory..."
-    # Make sure the database directory exists
+
     mkdir -p ${databasePath}
-    # Start mongod as a background process
+
     mongod --dbpath ${databasePath} --fork --logpath $(pwd)/mongodb.log
 
-    # Trap the EXIT signal to cleanup on shell exit
     trap 'echo "Shutting down MongoDB..."; mongod --shutdown --dbpath ${databasePath} ' EXIT
 
     echo "MongoDB started. Use mongo to connect. close the shell to stop the database."

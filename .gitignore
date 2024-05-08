@@ -4,3 +4,4 @@ misc
 result
 database
 *.log
+*.log.*

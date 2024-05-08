@@ -6,6 +6,7 @@ pkgs.mkShell {
     #Remove this if you want the shell to compile in a reasonable amount of time.
     python311Packages.pyvista
     python311Packages.glad2
+    python311Packages.black
     glxinfo
     killall
     jq
@@ -23,7 +24,7 @@ pkgs.mkShell {
         configurations = [{
           name = "Linux";
           includePath = [
-            "include"
+            "volsim/include"
             ".vscode/include"
             ".vscode/glad/include"
             "${pkgs.glfw}/include"
