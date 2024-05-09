@@ -5,6 +5,8 @@ pkgs.mkShell {
   packages = with pkgs; [   
     python311Packages.pymongo
     python311Packages.click
+    python311Packages.bson
+    python311Packages.tabulate
   ];
 
   shellHook =

@@ -148,6 +148,7 @@ Challenge::Segment::Segment(glm::vec3 start, glm::vec3 end, float radius)
     this->end = end;
     this->radius = radius;
     this->completed = false;
+	this->completedTime = std::chrono::milliseconds(0);
 }
 
 bool Challenge::isFinished()

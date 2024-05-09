@@ -157,10 +157,9 @@ extern "C"
 
 		saveDebugInfo(*trackerPtr, colourCamera, depthCamera, *hand);
 
-		std::string miscPath = "/home/robbieb/Projects/VolumetricSim/results/";
-
 		jsonOutput["results"] = challenge.returnJson();
 		jsonOutput["trackerLogs"] = trackerPtr->returnJson();
+		jsonOutput["finished"] = challenge.isFinished();
 
 		outputString = jsonOutput.dump();
 
@@ -173,7 +172,7 @@ extern "C"
 
 void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera, Image &depthCamera, Hand &hand)
 {
-	std::string miscPath = "/home/robbieb/Imperial/IndividualProject/VolumetricSim/misc/";
+	std::string miscPath = "/home/robbieb/Projects/VolumetricSim/misc/";
 
 	std::cout << "Saving data to " << miscPath << std::endl;
 
