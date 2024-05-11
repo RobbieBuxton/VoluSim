@@ -19,40 +19,50 @@ def cli():
 
 @cli.command()
 @click.option(
-    "--mode",
+    "-m",
     type=click.Choice(["t", "o", "s"], case_sensitive=False),
     required=True,
     help="Mode, t: Tracker, to: TrackerOffset, s: Static"
 )
 @click.option(
-    "--num",
+    "-n",
     type=int,
     required=True,
     help="Challenge number"
 )
 @click.option(
-    "--user",
+    "-u",
     type=str,
     required=True,
     help="User ID"
 )
-def run(mode, num, user):
+@click.option(
+    "--test", 
+    is_flag=True, 
+    default=False, 
+    help="Enable testing mode"
+)
+def run(m, n, u, test):
+    mode = m
+    num = n
+    user = u
     """ Run the simulation with specific mode, challenge number, and user ID. """
     print("Starting")
     
-    db = connect_to_mongo()
-    users_collection = db["users"]
-    results_collection = db["results"]
-    
-    # Validate user ID exists
-    if users_collection.count_documents({"_id": user},limit = 1) == 0:
-        print(f"User ID {user} does not exist in the database.")
-        return
+    if not test:
+        db = connect_to_mongo()
+        users_collection = db["users"]
+        results_collection = db["results"]
+        
+        # Validate user ID exists
+        if users_collection.count_documents({"_id": user},limit = 1) == 0:
+            print(f"User ID {user} does not exist in the database.")
+            return
 
-    # Check if the result for this user and mode already exists
-    if results_collection.count_documents({"user_id": user, "mode": mode_map[mode], "challenge_num": num}) > 0:
-        print(f"Result for User ID {user} with Mode {mode_map[mode]} and Challenge Number {num} already exists.")
-        return
+        # Check if the result for this user and mode already exists
+        if results_collection.count_documents({"user_id": user, "mode": mode_map[mode], "challenge_num": num}) > 0:
+            print(f"Result for User ID {user} with Mode {mode_map[mode]} and Challenge Number {num} already exists.")
+            return
 
     mode_full = mode_map[mode]  # Convert input mode shorthand to full mode
     mode_ctypes = mode_ctypes_map[mode_full]  # Convert full mode to ctypes
@@ -70,20 +80,21 @@ def run(mode, num, user):
     # Call the function
     result = handle.runSimulation(mode_ctypes, num)
     output = result.decode("utf-8")  # Decode the result from bytes to string
-
-    # Convert the JSON string to a Python dictionary
-    data = json.loads(output)
-    print(data["finished"])
-    if (not data["finished"]):
-        print("Simulation did not finish successfully: exiting")
-        return
     
-    data['user_id'] = user  # Add the user ID to the data dictionary
-    data['mode'] = mode_map[mode]  # Store the mode as well
-    data["challenge_num"] = num  # Store the challenge number as well
+    if not test:
+        # Convert the JSON string to a Python dictionary
+        data = json.loads(output)
+        print(data["finished"])
+        if (not data["finished"]):
+            print("Simulation did not finish successfully: exiting")
+            return
+        
+        data['user_id'] = user  # Add the user ID to the data dictionary
+        data['mode'] = mode_map[mode]  # Store the mode as well
+        data["challenge_num"] = num  # Store the challenge number as well
 
-    result = results_collection.insert_one(data)
-    print("Inserted record id:", result.inserted_id)
+        result = results_collection.insert_one(data)
+        print("Inserted record id:", result.inserted_id)
     
 @cli.command()
 @click.argument("first_name")

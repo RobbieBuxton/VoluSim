@@ -10,3 +10,8 @@ forward
 down
 down
 down
+left
+left
+left
+back
+back

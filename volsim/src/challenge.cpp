@@ -33,7 +33,7 @@ std::vector<glm::vec3> Challenge::loadDirections(const std::string &path)
     std::string keyword;
 
     // Mapping of direction keywords to glm::vec3 vectors
-    float len = 4.0f;
+    float len = 2.0f;
     std::unordered_map<std::string, glm::vec3> directionMap = {
         {"up", glm::vec3(0.0, len, 0.0)},
         {"down", glm::vec3(0.0, -len, 0.0)},

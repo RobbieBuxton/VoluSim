@@ -1,1 +1,15 @@
 up
+up
+up
+forward
+forward
+forward
+down
+down
+down
+back
+back
+up
+up
+forward
+down

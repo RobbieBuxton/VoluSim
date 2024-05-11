@@ -1,5 +1,15 @@
-back
+up
+up
+up
+right
+right
 right
 down
-forward
+down
+down
+left
+left
+up
+up
+right
 down
