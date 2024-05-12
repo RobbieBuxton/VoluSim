@@ -3,13 +3,15 @@
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include "filesystem.hpp"
+#include <iostream>
 
-Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> hand)
+Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> hand, int challengeNum)
 {
     this->renderer = renderer;
     this->hand = hand;
 
-    std::vector<glm::vec3> directions = loadDirections(FileSystem::getPath("data/challenges/demo1.txt"));
+    std::string challengePath = "data/challenges/demo" + std::to_string(challengeNum) + ".txt";
+    std::vector<glm::vec3> directions = loadDirections(FileSystem::getPath(challengePath));
 
     glm::vec3 point = glm::vec3(-10.0, 20.0, 25.0);
     glm::vec3 oldPoint;
@@ -20,6 +22,8 @@ Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> h
         point = oldPoint + direction;
         segments.push_back(Segment(oldPoint, point, 0.1));
     }
+
+    startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 }
 
 std::vector<glm::vec3> Challenge::loadDirections(const std::string &path)
@@ -29,7 +33,7 @@ std::vector<glm::vec3> Challenge::loadDirections(const std::string &path)
     std::string keyword;
 
     // Mapping of direction keywords to glm::vec3 vectors
-    float len = 4.0f; 
+    float len = 2.0f;
     std::unordered_map<std::string, glm::vec3> directionMap = {
         {"up", glm::vec3(0.0, len, 0.0)},
         {"down", glm::vec3(0.0, -len, 0.0)},
@@ -56,6 +60,11 @@ std::vector<glm::vec3> Challenge::loadDirections(const std::string &path)
 
 void Challenge::update()
 {
+    if (segments.size() == completedCnt)
+    {
+        finished = true;
+        return;
+    }
     if (hand->getGrabPosition().has_value())
     {
         grabbing = true;
@@ -63,11 +72,13 @@ void Challenge::update()
 
         Segment lastSegment = Segment(glm::vec3(0), glm::vec3(0), 0);
         lastSegment.completed = true;
-        for (Segment &segment : segments)
+        for (int i = completedCnt; i < segments.size(); i++)
         {
+            Segment &segment = segments[i];
             if (segment.completed)
             {
                 lastSegment = segment;
+                completedCnt++;
                 continue;
             }
             if (!lastSegment.completed)
@@ -78,10 +89,13 @@ void Challenge::update()
             if (!segment.completed && glm::distance(segment.end, grabPos) < 0.5)
             {
                 segment.completed = true;
+                segment.completedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+                std::cout << "Segment completed in " << (segment.completedTime - startTime).count() << "ms" << std::endl;
             }
             lastSegment = segment;
         }
-    } else 
+    }
+    else
     {
         grabbing = false;
     }
@@ -92,7 +106,7 @@ void Challenge::draw()
     renderer->drawPoint(segments.front().start, segments.front().radius * 3, 2);
     Segment lastSegment = Segment(glm::vec3(0), glm::vec3(0), 0);
     lastSegment.completed = true;
-    for (Segment segment : segments)
+    for (Segment &segment : segments)
     {
         if (segment.completed)
         {
@@ -105,7 +119,7 @@ void Challenge::draw()
             {
                 renderer->drawLine(segment.start, grabPos, segment.radius, 0);
             }
-            
+
             renderer->drawPoint(segment.end, segment.radius * 3, 4);
         }
         else
@@ -116,10 +130,28 @@ void Challenge::draw()
     }
 }
 
+nlohmann::json Challenge::returnJson()
+{
+    nlohmann::json jsonOutput;
+    for (int i = 0; i < segments.size(); i++)
+    {
+        Segment &segment = segments[i];
+        jsonOutput.push_back({{"index", i},
+                              {"completedTime", segment.completedTime.count()}});
+    }
+		return jsonOutput;
+}
+
 Challenge::Segment::Segment(glm::vec3 start, glm::vec3 end, float radius)
 {
     this->start = start;
     this->end = end;
     this->radius = radius;
     this->completed = false;
+	this->completedTime = std::chrono::milliseconds(0);
+}
+
+bool Challenge::isFinished()
+{
+    return finished;
 }

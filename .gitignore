@@ -2,3 +2,6 @@
 *.dat
 misc
 result
+database
+*.log
+*.log.*

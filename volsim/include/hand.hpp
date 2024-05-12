@@ -12,7 +12,7 @@
 class Hand
 {
 public:
-    Hand(std::shared_ptr<Renderer> renderer);
+    Hand(std::shared_ptr<Renderer> renderer, glm::vec3 offset);
     std::optional<glm::vec3> getGrabPosition();
     void draw();
     void save(const std::string &filename);
@@ -21,7 +21,7 @@ public:
 private:
     glm::vec3 index;
     glm::vec3 thumb;
-    
+    glm::vec3 offset;
     std::shared_ptr<Renderer> renderer;
 };
 

@@ -1,4 +1,4 @@
-{ pkgs, k4apkgs, tolHeader, libmediapipepkg }:
+{ pkgs, k4apkgs, tolHeader, jsonHeader, libmediapipepkg }:
 pkgs.mkShell {
   name = "volumetricSim";
 
@@ -6,6 +6,7 @@ pkgs.mkShell {
     #Remove this if you want the shell to compile in a reasonable amount of time.
     python311Packages.pyvista
     python311Packages.glad2
+    python311Packages.black
     glxinfo
     killall
     jq
@@ -23,7 +24,7 @@ pkgs.mkShell {
         configurations = [{
           name = "Linux";
           includePath = [
-            "include"
+            "volsim/include"
             ".vscode/include"
             ".vscode/glad/include"
             "${pkgs.glfw}/include"
@@ -52,7 +53,9 @@ pkgs.mkShell {
       jq --indent 4 -n '${
         builtins.toJSON vscodeCppConfig
       }' >> ${vscodeDir}/c_cpp_properties.json
-      mkdir -p ${vscodeDir}/include && cp ${tolHeader} ./${vscodeDir}/include/tiny_obj_loader.h
+      mkdir -p ${vscodeDir}/include
+      cp -f ${tolHeader} ./${vscodeDir}/include/tiny_obj_loader.h
+      cp -f ${jsonHeader} ./${vscodeDir}/include/json.hpp
       trap "rm ${vscodeDir} -rf;" exit 
     '';
 }
