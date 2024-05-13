@@ -159,7 +159,14 @@ extern "C"
 		trackerThread.join();
 		captureThread.join();
 
-		saveDebugInfo(*trackerPtr, colourCamera, depthCamera, *hand);
+		Image colourCameraSkeleton = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
+		colourCameraSkeleton.updateImage(trackerPtr->getColorImageSkeletons());
+		Image colourCameraImportant = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
+		colourCameraImportant.updateImage(trackerPtr->getColorImageImportant());
+		Image depthCameraImportant = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
+		depthCameraImportant.updateImage(trackerPtr->getDepthImageImportant());
+
+		saveDebugInfo(*trackerPtr, colourCamera, colourCameraSkeleton, colourCameraImportant,  depthCamera,  depthCameraImportant, *hand);
 
 		jsonOutput["results"] = challenge.returnJson();
 		jsonOutput["trackerLogs"] = trackerPtr->returnJson();
@@ -174,7 +181,7 @@ extern "C"
 	}
 }
 
-void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera, Image &depthCamera, Hand &hand)
+void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera,  Image &colourCameraSkeleton, Image &colourCameraImportant, Image &depthCamera, Image &depthCameraImportant, Hand &hand)
 {
 	std::string miscPath = "/home/robbieb/Projects/VolumetricSim/misc/";
 
@@ -186,8 +193,13 @@ void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera, Image &depthCamera,
 	pointCloud.save(miscPath + "pointCloud.csv");
 	std::cout << "Saving Colour Camera" << std::endl;
 	colourCamera.save(miscPath + "colourImage.png");
+	colourCameraSkeleton.save(miscPath + "colourImageSkeleton.png");
+	colourCameraImportant.save(miscPath + "colourImageImportant.png");
 	std::cout << "Saving Depth Camera" << std::endl;
 	depthCamera.save(miscPath + "depthImage.png");
+	depthCameraImportant.save(miscPath + "depthImageImportant.png");
+
+
 
 	std::cout << "Saving Eye Pos Left" << std::endl;
 	std::optional<glm::vec3> leftEyePos = trackerPtr.getLeftEyePos();

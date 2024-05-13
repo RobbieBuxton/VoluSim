@@ -395,9 +395,9 @@ void Tracker::update()
 			cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
 
 			colorDepthImage.copyTo(depthImage);
-			processedBgrImage.copyTo(colorImage);
-
-			debugDraw(colorImage);
+			bgraImage.copyTo(colorImage);
+			
+			debugDraw();
 		}
 		catch (const std::exception &e)
 		{
@@ -425,7 +425,7 @@ void Tracker::update()
 	}
 }
 
-void Tracker::debugDraw(cv::Mat inputColorImage)
+void Tracker::debugDraw()
 {
 	const mp_hand_landmark CONNECTIONS[][2] = {
 		{mp_hand_landmark_wrist, mp_hand_landmark_thumb_cmc},
@@ -455,6 +455,10 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
 		return;
 	}
 
+	colorImage.copyTo(colorImageSkeletons);
+	colorImage.copyTo(colorImageImportant);
+	depthImage.copyTo(depthImageImportant);
+
 	if (trackF->face)
 	{
 		cv::Point2f faceCenter((float)trackF->face->box.x, (float)trackF->face->box.y);
@@ -466,12 +470,15 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
 		cv::RotatedRect(faceCenter, faceSize, faceRotation).points(faceVertices);
 		for (int j = 0; j < 4; j++)
 		{
-			cv::line(inputColorImage, faceVertices[j], faceVertices[(j + 1) % 4], CV_RGB(0, 0, 255), 2);
+			cv::line(colorImageSkeletons, cv::Point(faceVertices[j].x * 2,faceVertices[j].y * 2), cv::Point(faceVertices[(j + 1) % 4].x * 2, faceVertices[(j + 1) % 4].y * 2), CV_RGB(0, 0, 255), 2);
 		}
 		for (unsigned long j = 0; j < 5; j++)
 		{
-			cv::circle(inputColorImage, cv::Point(trackF->face->landmarks[j].x, trackF->face->landmarks[j].y), 3, cv::Scalar(0, 0, 255), -1);
+			cv::circle(colorImageSkeletons, cv::Point(trackF->face->landmarks[j].x * 2, trackF->face->landmarks[j].y * 2), 3, cv::Scalar(0, 0, 255), -1);
 		}
+		cv::Point leftEyeCenter = cv::Point2f((trackF->face->landmarks[0].x + trackF->face->landmarks[1].x), (trackF->face->landmarks[0].y + trackF->face->landmarks[1].y));
+		cv::circle (colorImageImportant, leftEyeCenter, 10, cv::Scalar(55, 124, 255), -1);
+		cv::circle (depthImageImportant, leftEyeCenter, 10, cv::Scalar(55, 124, 255), -1);
 	}
 
 	if (trackF->hand)
@@ -482,7 +489,7 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
 			{
 				const glm::vec2 &p1 = trackF->hand->landmarks[connection[0]];
 				const glm::vec2 &p2 = trackF->hand->landmarks[connection[1]];
-				cv::line(inputColorImage, {(int)p1.x, (int)p1.y}, {(int)p2.x, (int)p2.y}, CV_RGB(0, 255, 0), 2);
+				cv::line(colorImageSkeletons, {(int)p1.x * 2, (int)p1.y * 2}, {(int)p2.x * 2, (int)p2.y * 2}, CV_RGB(0, 255, 0), 2);
 			}
 		}
 
@@ -507,9 +514,17 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
 				// Calculate the color based on the normalized z value
 				cv::Scalar color(0, 0, 255 * (1 - normalizedZ));
 
-				cv::circle(inputColorImage, cv::Point(landmark.x, landmark.y), 5, color, -1);
+				cv::circle(colorImageSkeletons, cv::Point(landmark.x * 2, landmark.y * 2), 5, color, -1);
 			}
 		}
+
+		cv::Point2f thumb = cv::Point2f((float)trackF->hand->landmarks[mp_hand_landmark_thumb_tip].x * 2, (float)trackF->hand->landmarks[mp_hand_landmark_thumb_tip].y * 2);
+		cv::circle (colorImageImportant, thumb, 10, cv::Scalar(163, 69, 143), -1);
+		cv::circle (depthImageImportant, thumb, 10, cv::Scalar(163, 69, 143), -1);
+		cv::Point2f index = cv::Point2f((float)trackF->hand->landmarks[mp_hand_landmark_index_finger_tip].x * 2, (float)trackF->hand->landmarks[mp_hand_landmark_index_finger_tip].y * 2);
+		cv::circle (colorImageImportant, index, 10, cv::Scalar(163, 69, 143), -1);
+		cv::circle (depthImageImportant, index, 10, cv::Scalar(163, 69, 143), -1);
+
 
 		cv::Point2f handCenter((float)trackF->hand->box.x, (float)trackF->hand->box.y);
 		cv::Point2f handSize((float)trackF->hand->box.width, (float)trackF->hand->box.height);
@@ -520,7 +535,7 @@ void Tracker::debugDraw(cv::Mat inputColorImage)
 		cv::RotatedRect(handCenter, handSize, handRotation).points(handVertices);
 		for (int j = 0; j < 4; j++)
 		{
-			cv::line(inputColorImage, handVertices[j], handVertices[(j + 1) % 4], CV_RGB(0, 0, 255), 2);
+			cv::line(colorImageSkeletons, cv::Point(handVertices[j].x * 2, handVertices[j].y * 2), cv::Point(handVertices[(j + 1) % 4].x*2,handVertices[(j + 1) % 4].y*2) , CV_RGB(0, 0, 255), 2);
 		}
 	}
 }
@@ -669,10 +684,27 @@ cv::Mat Tracker::getDepthImage()
 	return depthImage;
 }
 
+cv::Mat Tracker::getDepthImageImportant()
+{
+	return depthImageImportant;
+}
+
 cv::Mat Tracker::getColorImage()
 {
 	return colorImage;
 }
+
+cv::Mat Tracker::getColorImageImportant()
+{
+	return colorImageImportant;
+}
+
+cv::Mat Tracker::getColorImageSkeletons()
+{
+	return colorImageSkeletons;
+}
+
+
 
 Tracker::~Tracker()
 {

@@ -43,7 +43,10 @@ public:
     std::optional<glm::vec3> getRightEyePos();
     std::optional<std::vector<glm::vec3>> getHandLandmarks();
     cv::Mat getDepthImage();
+	cv::Mat getDepthImageImportant();
     cv::Mat getColorImage();
+	cv::Mat getColorImageImportant();
+	cv::Mat getColorImageSkeletons();
     std::vector<glm::vec3> getPointCloud();
     void getLatestCapture();
     nlohmann::json returnJson();
@@ -74,7 +77,7 @@ private:
     };
 
     void createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> cInst);
-    void debugDraw(cv::Mat inputColorImage);
+    void debugDraw();
     glm::vec3 calculate3DPos(int x, int y, k4a_calibration_type_t source_type, std::shared_ptr<Capture> capture);
     glm::vec3 toScreenSpace(glm::vec3 pos);
     glm::vec3 getFilteredPoint(glm::vec3 point, std::shared_ptr<Capture> capture);
@@ -95,7 +98,10 @@ private:
     dlib::shape_predictor predictor;
 
     cv::Mat colorImage;
+	cv::Mat colorImageSkeletons;
+	cv::Mat colorImageImportant;
     cv::Mat depthImage;
+	cv::Mat depthImageImportant;
 
     mp_instance *instance;
     mp_poller *landmarks_poller;
