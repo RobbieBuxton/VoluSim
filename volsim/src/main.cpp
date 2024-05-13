@@ -37,10 +37,15 @@ extern "C"
 	const char *runSimulation(Mode trackerMode, int challengeNum)
 	{
 		debugInitPrint();
-		GLuint maxPixelWidth = 3840;
-		GLuint maxPixelHeight = 2160;
-		GLuint pixelWidth = 3840;
-		GLuint pixelHeight = 2160;
+		// GLuint maxPixelWidth = 3840;
+		//qw GLuint maxPixelHeight = 2160;
+		// GLuint pixelWidth = 3840;
+		// GLuint pixelHeight = 2160;
+
+		GLuint maxPixelWidth = 1920; 
+		GLuint maxPixelHeight = 1200;
+		GLuint pixelWidth = 1920;
+		GLuint pixelHeight = 1200;
 		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
 
 		// Robbie's Screen
@@ -52,7 +57,7 @@ extern "C"
 		GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
 		Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, dDepth, 1.0f, 1000.0f);
 		std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
-		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 3.0f), 30.0f);
+		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 0.0), 30.0f);
 
 		std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 		std::thread captureThread(pollCapture, trackerPtr.get(), window);
@@ -124,7 +129,6 @@ extern "C"
 
 			renderer->clear();
 			renderer->updateEyePos(currentEyePos);
-			renderer->drawRoom();
 
 			// Need to convert this to render with opengl rather than opencv
 			if (!trackerPtr->getColorImage().empty())

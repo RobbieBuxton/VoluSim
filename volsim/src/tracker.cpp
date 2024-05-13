@@ -125,8 +125,8 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
 	mp_instance_builder *builder = mp_create_instance_builder(landmarkPath.c_str(), "image");
 
 	// Configure the graph with node options and side packets.
-	mp_add_option_float(builder, "palmdetectioncpu__TensorsToDetectionsCalculator", "min_score_thresh", 0.6);
-	mp_add_option_double(builder, "handlandmarkcpu__ThresholdingCalculator", "threshold", 0.2);
+	mp_add_option_float(builder, "palmdetectioncpu__TensorsToDetectionsCalculator", "min_score_thresh", 0.5);
+	mp_add_option_double(builder, "handlandmarkcpu__ThresholdingCalculator", "threshold", 0.5);
 	mp_add_side_packet(builder, "num_hands", mp_create_packet_int(1));
 	mp_add_side_packet(builder, "model_complexity", mp_create_packet_int(1));
 	mp_add_side_packet(builder, "use_prev_landmarks", mp_create_packet_bool(true));
@@ -277,6 +277,7 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
 	// Wait until the image has been processed.
 	CHECK_MP_RESULT(mp_wait_until_idle(instance))
 
+
 	// Get hand landmarks
 	// Making the assumption if there is a landmark packet there is a rect packet
 	if (mp_get_queue_size(landmarks_poller) > 0)
@@ -412,11 +413,11 @@ void Tracker::update()
 		trackF->lastCapture = latestCapture;
 
 		// Print all durations at the end
-		// std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
-		//           << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
-		//           << "Tracking:          " << durationTracking.count() << " ms\n"
-		//           << "Total Time:        " << durationOverall.count() << " ms" << std::endl
-		//           << std::endl;
+		std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
+		          << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
+		          << "Tracking:          " << durationTracking.count() << " ms\n"
+		          << "Total Time:        " << durationOverall.count() << " ms" << std::endl
+		          << std::endl;
 	}
 	catch (const std::exception &e)
 	{

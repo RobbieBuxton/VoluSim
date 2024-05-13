@@ -13,7 +13,7 @@ Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> h
     std::string challengePath = "data/challenges/demo" + std::to_string(challengeNum) + ".txt";
     std::vector<glm::vec3> directions = loadDirections(FileSystem::getPath(challengePath));
 
-    glm::vec3 point = glm::vec3(-10.0, 20.0, 25.0);
+    glm::vec3 point = glm::vec3(-4.0, 18.0, 10.0);
     glm::vec3 oldPoint;
 
     for (auto direction : directions)
@@ -102,8 +102,22 @@ void Challenge::update()
 }
 
 void Challenge::draw()
-{
-    renderer->drawPoint(segments.front().start, segments.front().radius * 3, 2);
+{	
+	glm::vec3 centre = glm::vec3(0.0, 20.0, 0.0);
+	float width = 20;
+	renderer->drawCuboid(centre, width, width, 0.1, 0);
+
+	renderer->drawLine(centre + glm::vec3(-width/2.0f,-width/2.0f,0), centre + glm::vec3(-width/2.0f,-width/2.0f,width), 0.05, 0);
+	renderer->drawLine(centre + glm::vec3(width/2.0f,-width/2.0f,0), centre + glm::vec3(width/2.0f,-width/2.0f,width), 0.05, 0);
+	renderer->drawLine(centre + glm::vec3(-width/2.0f,width/2.0f,0), centre + glm::vec3(-width/2.0f,width/2.0f,width), 0.05, 0);
+	renderer->drawLine(centre + glm::vec3(width/2.0f,width/2.0f,0), centre + glm::vec3(width/2.0f,width/2.0f,width), 0.05, 0);
+	
+	renderer->drawLine(centre + glm::vec3(-width/2.0f,-width/2.0f,width), centre + glm::vec3(width/2.0f,-width/2.0f,width), 0.05, 0);
+	renderer->drawLine(centre + glm::vec3(-width/2.0f,width/2.0f,width), centre + glm::vec3(width/2.0f,width/2.0f,width), 0.05, 0);
+	renderer->drawLine(centre + glm::vec3(-width/2.0f,-width/2.0f,width), centre + glm::vec3(-width/2.0f,width/2.0f,width), 0.05, 0);
+    renderer->drawLine(centre + glm::vec3(width/2.0f,-width/2.0f,width), centre + glm::vec3(width/2.0f,width/2.0f,width), 0.05, 0);
+
+	renderer->drawPoint(segments.front().start, segments.front().radius * 3, 2);
     Segment lastSegment = Segment(glm::vec3(0), glm::vec3(0), 0);
     lastSegment.completed = true;
     for (Segment &segment : segments)
