@@ -626,7 +626,7 @@ std::optional<glm::vec3> Tracker::getLeftEyePos()
 			trackF->face->landmarks[0].x + trackF->face->landmarks[1].x,
 			trackF->face->landmarks[0].y + trackF->face->landmarks[1].y);
 
-		glm::vec3 translatedEye = calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR, trackF->face->capture);
+		glm::vec3 translatedEye = toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR, trackF->face->capture));
 		jsonLog["leftEye"].push_back({{"time", currentTimeInMilliseconds},
 									  {"x", translatedEye.x},
 									  {"y", translatedEye.y},
