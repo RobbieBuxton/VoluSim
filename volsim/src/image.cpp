@@ -64,18 +64,20 @@ Image::Image(glm::vec2 topLeft, glm::vec2 bottomRight)
 
 void Image::updateImage(const cv::Mat &image)
 {
-  
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    cv::Mat imageRGB;
+	if (image.size() != cv::Size(0, 0))
+	{
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		cv::Mat imageRGB;
 
-    cv::cvtColor(image, imageRGB, cv::COLOR_BGR2RGB); // Convert BGR to RGB
+		cv::cvtColor(image, imageRGB, cv::COLOR_BGR2RGB); // Convert BGR to RGB
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageRGB.cols, imageRGB.rows, 0, GL_RGB, GL_UNSIGNED_BYTE, imageRGB.data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageRGB.cols, imageRGB.rows, 0, GL_RGB, GL_UNSIGNED_BYTE, imageRGB.data);
 
-    imageRGB.release();
+		imageRGB.release();
 
-    glBindTexture(GL_TEXTURE_2D, 0);
-    return;
+		glBindTexture(GL_TEXTURE_2D, 0);
+		return;
+	}
 }
 
 void Image::save(const std::string& filename)

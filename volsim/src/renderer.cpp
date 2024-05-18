@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 Renderer::Renderer(Display display)
 {
@@ -12,25 +13,26 @@ Renderer::Renderer(Display display)
     this->line = std::make_unique<Model>("data/resources/models/cylinder.obj");
 	this->cube = std::make_unique<Model>("data/resources/models/cube.obj");
     this->room = std::make_unique<Model>("data/resources/models/room.obj");
+	// this->erato = std::make_unique<Model>("data/resources/models/erato.obj");
     this->modelShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
     this->imageShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/image.vs").c_str(), FileSystem::getPath("data/shaders/image.fs").c_str());
     this->display = std::make_unique<Display>(display);
 }
 
 
-void Renderer::renderHouse() {
-	setupShader();
+// void Renderer::renderErato() {
+// 	setupShader();
 
-    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f));
+//     glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 
-	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+// 	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 20.0f, 0.0f));
-    glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+//     glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 20.0f, 0.0f));
+//     glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
 	
-    modelShader->setMat4("model", model);
-    house->draw(*modelShader.get());
-}
+//     modelShader->setMat4("model", model);
+//     erato->draw(*modelShader.get());
+// }
 
 glm::mat4 Renderer::calculateRotation(glm::vec3 start, glm::vec3 end)
 {
@@ -117,7 +119,8 @@ void Renderer::drawRoom() {
 }
 
 void Renderer::updateEyePos(glm::vec3 currentEyePos)
-{
+{	
+	// std::cout << "L Eye Pos: " << glm::to_string(currentEyePos) << std::endl;
     this->currentEyePos = currentEyePos;
     this->projectionToEye = display->projectionToEye(currentEyePos);
 }

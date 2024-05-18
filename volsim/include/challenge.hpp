@@ -30,7 +30,7 @@ private:
         std::chrono::milliseconds completedTime;
     };
     std::chrono::milliseconds startTime;
-
+	glm::vec3 centre = glm::vec3(0.0, 15.0f, 0.0);
     std::shared_ptr<Renderer> renderer;
     std::shared_ptr<Hand> hand;
     std::vector<Segment> segments;

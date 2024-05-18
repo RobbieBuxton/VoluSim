@@ -65,9 +65,9 @@ public:
 	FailedToDetectFaceException() : TrackerException("Could not detect face from capture") {}
 };
 
-Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
+Tracker::Tracker(glm::vec3 initCameraOffset, float yRot, bool debug)
 {
-
+	this->debug = debug;
 	cameraOffset = initCameraOffset;
 
 	// Check for Trackers
@@ -99,7 +99,7 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
 	config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 	config.camera_fps = K4A_FRAMES_PER_SECOND_30;
 	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-	config.color_resolution = K4A_COLOR_RESOLUTION_1080P;
+	config.color_resolution = K4A_COLOR_RESOLUTION_1536P;
 	config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
 	config.synchronized_images_only = true;
 
@@ -154,6 +154,8 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot)
 
 	// Make sure the capture is initialized
 	getLatestCapture();
+
+	this->ready = true;
 }
 
 glm::vec3 Tracker::calculate3DPos(int x, int y, k4a_calibration_type_t source_type, std::shared_ptr<Capture> capture)
@@ -229,6 +231,108 @@ std::vector<glm::vec3> Tracker::getPointCloud()
 	return pointCloud;
 }
 
+void Tracker::getLatestCapture()
+{
+	while (true)
+	{
+		try
+		{
+			latestCapture = std::make_shared<Capture>(device, transformation);
+			return;
+		}
+		catch (const std::exception &e)
+		{
+			// wait 1 millisecond
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	}
+}
+
+void Tracker::update()
+{
+	if (trackF->lastCapture == latestCapture)
+	{
+		return;
+	}
+	try
+	{
+		// Define time points and durations
+		std::chrono::high_resolution_clock::time_point startOverall, stopOverall;
+		std::chrono::high_resolution_clock::time_point start, stop;
+		std::chrono::milliseconds durationCapture, durationGPUOperations, durationTracking, durationOverall;
+
+		startOverall = std::chrono::high_resolution_clock::now();
+
+		// Step 1: Capture Instance
+		start = std::chrono::high_resolution_clock::now();
+		stop = std::chrono::high_resolution_clock::now();
+		durationCapture = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+		// Steps 2, 3, and 4: GPU Operations (Upload to GPU, GPU Processing, Download from GPU)
+		start = std::chrono::high_resolution_clock::now();
+
+		// Upload to GPU
+		cv::Mat bgraImage(latestCapture->colorSpace.height, latestCapture->colorSpace.width, CV_8UC4, k4a_image_get_buffer(latestCapture->colorSpace.colorImage), (size_t)k4a_image_get_stride_bytes(latestCapture->colorSpace.colorImage));
+		cv::cuda::GpuMat bgraImageGpu, bgrImageGpu;
+		bgraImageGpu.upload(bgraImage);
+
+		// GPU Processing
+		cv::cuda::cvtColor(bgraImageGpu, bgrImageGpu, cv::COLOR_BGRA2BGR);
+		cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
+
+		// Download from GPU
+		cv::Mat processedBgrImage;
+		bgrImageGpu.download(processedBgrImage);
+		stop = std::chrono::high_resolution_clock::now();
+		durationGPUOperations = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+		// Step 5: Run the tracking
+		start = std::chrono::high_resolution_clock::now();
+		try
+		{
+			createNewTrackingFrame(processedBgrImage, latestCapture);
+
+			// Normalize and map depth image (example of further processing)
+			cv::Mat dImage(latestCapture->colorSpace.height, latestCapture->colorSpace.width, CV_16U, k4a_image_get_buffer(latestCapture->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(latestCapture->colorSpace.depthImage));
+			cv::Mat normalisedDImage, colorDepthImage;
+
+			cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
+			cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
+
+			colorDepthImage.copyTo(depthImage);
+			bgraImage.copyTo(colorImage);
+
+			if (debug)
+			{
+				debugDraw();
+			}
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr << "Failed to create new tracking frame" << std::endl;
+		}
+
+		stop = std::chrono::high_resolution_clock::now();
+		durationTracking = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+		stopOverall = std::chrono::high_resolution_clock::now();
+		durationOverall = std::chrono::duration_cast<std::chrono::milliseconds>(stopOverall - startOverall);
+
+		trackF->lastCapture = latestCapture;
+
+		// Print all durations at the end
+		// std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
+		//           << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
+		//           << "Tracking:          " << durationTracking.count() << " ms\n"
+		//           << "Total Time:        " << durationOverall.count() << " ms" << std::endl
+		//           << std::endl;
+	}
+	catch (const std::exception &e)
+	{
+		throw;
+	}
+}
+
 void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Capture> capture)
 {
 	// Store the frame data in an image structure.
@@ -277,7 +381,6 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
 	// Wait until the image has been processed.
 	CHECK_MP_RESULT(mp_wait_until_idle(instance))
 
-
 	// Get hand landmarks
 	// Making the assumption if there is a landmark packet there is a rect packet
 	if (mp_get_queue_size(landmarks_poller) > 0)
@@ -325,106 +428,6 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
 	}
 }
 
-void Tracker::getLatestCapture()
-{
-	while (true)
-	{
-		try
-		{
-			latestCapture = std::make_shared<Capture>(device, transformation);
-			return;
-		}
-		catch (const std::exception &e)
-		{
-			// wait 1 millisecond
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-	}
-}
-
-void Tracker::update()
-{
-	if (trackF->lastCapture == latestCapture)
-	{
-		return;
-	}
-	try
-	{
-		// Define time points and durations
-		std::chrono::high_resolution_clock::time_point startOverall, stopOverall;
-		std::chrono::high_resolution_clock::time_point start, stop;
-		std::chrono::milliseconds durationCapture, durationGPUOperations, durationTracking, durationOverall;
-
-		startOverall = std::chrono::high_resolution_clock::now();
-
-		// Step 1: Capture Instance
-		start = std::chrono::high_resolution_clock::now();
-
-		stop = std::chrono::high_resolution_clock::now();
-		durationCapture = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-		// Steps 2, 3, and 4: GPU Operations (Upload to GPU, GPU Processing, Download from GPU)
-		start = std::chrono::high_resolution_clock::now();
-
-		// Upload to GPU
-		cv::Mat bgraImage(latestCapture->colorSpace.height, latestCapture->colorSpace.width, CV_8UC4, k4a_image_get_buffer(latestCapture->colorSpace.colorImage), (size_t)k4a_image_get_stride_bytes(latestCapture->colorSpace.colorImage));
-		cv::cuda::GpuMat bgraImageGpu, bgrImageGpu;
-		bgraImageGpu.upload(bgraImage);
-
-		// GPU Processing
-		cv::cuda::cvtColor(bgraImageGpu, bgrImageGpu, cv::COLOR_BGRA2BGR);
-		cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
-
-		// Download from GPU
-		cv::Mat processedBgrImage;
-		bgrImageGpu.download(processedBgrImage);
-
-		stop = std::chrono::high_resolution_clock::now();
-		durationGPUOperations = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-		// Step 5: Run the tracking
-		start = std::chrono::high_resolution_clock::now();
-		try
-		{
-			createNewTrackingFrame(processedBgrImage, latestCapture);
-
-			// Normalize and map depth image (example of further processing)
-			cv::Mat dImage(latestCapture->colorSpace.height, latestCapture->colorSpace.width, CV_16U, k4a_image_get_buffer(latestCapture->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(latestCapture->colorSpace.depthImage));
-			cv::Mat normalisedDImage, colorDepthImage;
-			cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
-			cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
-
-			colorDepthImage.copyTo(depthImage);
-			bgraImage.copyTo(colorImage);
-			
-			debugDraw();
-		}
-		catch (const std::exception &e)
-		{
-			std::cerr << "Failed to create new tracking frame" << std::endl;
-		}
-
-		stop = std::chrono::high_resolution_clock::now();
-		durationTracking = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-		stopOverall = std::chrono::high_resolution_clock::now();
-		durationOverall = std::chrono::duration_cast<std::chrono::milliseconds>(stopOverall - startOverall);
-
-		trackF->lastCapture = latestCapture;
-
-		// Print all durations at the end
-		std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
-		          << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
-		          << "Tracking:          " << durationTracking.count() << " ms\n"
-		          << "Total Time:        " << durationOverall.count() << " ms" << std::endl
-		          << std::endl;
-	}
-	catch (const std::exception &e)
-	{
-		throw;
-	}
-}
-
 void Tracker::debugDraw()
 {
 	const mp_hand_landmark CONNECTIONS[][2] = {
@@ -454,8 +457,9 @@ void Tracker::debugDraw()
 	{
 		return;
 	}
-
 	colorImage.copyTo(colorImageSkeletons);
+	colorImage.copyTo(colorImageSkeletonFace);
+	colorImage.copyTo(colorImageSkeletonHand);
 	colorImage.copyTo(colorImageImportant);
 	depthImage.copyTo(depthImageImportant);
 
@@ -470,15 +474,17 @@ void Tracker::debugDraw()
 		cv::RotatedRect(faceCenter, faceSize, faceRotation).points(faceVertices);
 		for (int j = 0; j < 4; j++)
 		{
-			cv::line(colorImageSkeletons, cv::Point(faceVertices[j].x * 2,faceVertices[j].y * 2), cv::Point(faceVertices[(j + 1) % 4].x * 2, faceVertices[(j + 1) % 4].y * 2), CV_RGB(0, 0, 255), 2);
+			cv::line(colorImageSkeletons, cv::Point(faceVertices[j].x * 2, faceVertices[j].y * 2), cv::Point(faceVertices[(j + 1) % 4].x * 2, faceVertices[(j + 1) % 4].y * 2), CV_RGB(0, 0, 255), 5);
+			cv::line(colorImageSkeletonFace, cv::Point(faceVertices[j].x * 2, faceVertices[j].y * 2), cv::Point(faceVertices[(j + 1) % 4].x * 2, faceVertices[(j + 1) % 4].y * 2), CV_RGB(0, 0, 255), 5);
 		}
 		for (unsigned long j = 0; j < 5; j++)
 		{
-			cv::circle(colorImageSkeletons, cv::Point(trackF->face->landmarks[j].x * 2, trackF->face->landmarks[j].y * 2), 3, cv::Scalar(0, 0, 255), -1);
+			cv::circle(colorImageSkeletons, cv::Point(trackF->face->landmarks[j].x * 2, trackF->face->landmarks[j].y * 2), 10, cv::Scalar(0, 0, 255), -1);
+			cv::circle(colorImageSkeletonFace, cv::Point(trackF->face->landmarks[j].x * 2, trackF->face->landmarks[j].y * 2), 10, cv::Scalar(0, 0, 255), -1);
 		}
 		cv::Point leftEyeCenter = cv::Point2f((trackF->face->landmarks[0].x + trackF->face->landmarks[1].x), (trackF->face->landmarks[0].y + trackF->face->landmarks[1].y));
-		cv::circle (colorImageImportant, leftEyeCenter, 10, cv::Scalar(55, 124, 255), -1);
-		cv::circle (depthImageImportant, leftEyeCenter, 10, cv::Scalar(55, 124, 255), -1);
+		cv::circle(colorImageImportant, leftEyeCenter, 20, cv::Scalar(55, 124, 255), -1);
+		cv::circle(depthImageImportant, leftEyeCenter, 20, cv::Scalar(55, 124, 255), -1);
 	}
 
 	if (trackF->hand)
@@ -489,7 +495,8 @@ void Tracker::debugDraw()
 			{
 				const glm::vec2 &p1 = trackF->hand->landmarks[connection[0]];
 				const glm::vec2 &p2 = trackF->hand->landmarks[connection[1]];
-				cv::line(colorImageSkeletons, {(int)p1.x * 2, (int)p1.y * 2}, {(int)p2.x * 2, (int)p2.y * 2}, CV_RGB(0, 255, 0), 2);
+				cv::line(colorImageSkeletons, {(int)p1.x * 2, (int)p1.y * 2}, {(int)p2.x * 2, (int)p2.y * 2}, CV_RGB(0, 255, 0), 5);
+				cv::line(colorImageSkeletonHand, {(int)p1.x * 2, (int)p1.y * 2}, {(int)p2.x * 2, (int)p2.y * 2}, CV_RGB(0, 255, 0), 5);
 			}
 		}
 
@@ -514,17 +521,17 @@ void Tracker::debugDraw()
 				// Calculate the color based on the normalized z value
 				cv::Scalar color(0, 0, 255 * (1 - normalizedZ));
 
-				cv::circle(colorImageSkeletons, cv::Point(landmark.x * 2, landmark.y * 2), 5, color, -1);
+				cv::circle(colorImageSkeletons, cv::Point(landmark.x * 2, landmark.y * 2), 10, color, -1);
+				cv::circle(colorImageSkeletonHand, cv::Point(landmark.x * 2, landmark.y * 2), 10, color, -1);
 			}
 		}
 
 		cv::Point2f thumb = cv::Point2f((float)trackF->hand->landmarks[mp_hand_landmark_thumb_tip].x * 2, (float)trackF->hand->landmarks[mp_hand_landmark_thumb_tip].y * 2);
-		cv::circle (colorImageImportant, thumb, 10, cv::Scalar(163, 69, 143), -1);
-		cv::circle (depthImageImportant, thumb, 10, cv::Scalar(163, 69, 143), -1);
+		cv::circle(colorImageImportant, thumb, 20, cv::Scalar(163, 69, 143), -1);
+		cv::circle(depthImageImportant, thumb, 20, cv::Scalar(163, 69, 143), -1);
 		cv::Point2f index = cv::Point2f((float)trackF->hand->landmarks[mp_hand_landmark_index_finger_tip].x * 2, (float)trackF->hand->landmarks[mp_hand_landmark_index_finger_tip].y * 2);
-		cv::circle (colorImageImportant, index, 10, cv::Scalar(163, 69, 143), -1);
-		cv::circle (depthImageImportant, index, 10, cv::Scalar(163, 69, 143), -1);
-
+		cv::circle(colorImageImportant, index, 20, cv::Scalar(163, 69, 143), -1);
+		cv::circle(depthImageImportant, index, 20, cv::Scalar(163, 69, 143), -1);
 
 		cv::Point2f handCenter((float)trackF->hand->box.x, (float)trackF->hand->box.y);
 		cv::Point2f handSize((float)trackF->hand->box.width, (float)trackF->hand->box.height);
@@ -535,7 +542,8 @@ void Tracker::debugDraw()
 		cv::RotatedRect(handCenter, handSize, handRotation).points(handVertices);
 		for (int j = 0; j < 4; j++)
 		{
-			cv::line(colorImageSkeletons, cv::Point(handVertices[j].x * 2, handVertices[j].y * 2), cv::Point(handVertices[(j + 1) % 4].x*2,handVertices[(j + 1) % 4].y*2) , CV_RGB(0, 0, 255), 2);
+			cv::line(colorImageSkeletons, cv::Point(handVertices[j].x * 2, handVertices[j].y * 2), cv::Point(handVertices[(j + 1) % 4].x * 2, handVertices[(j + 1) % 4].y * 2), CV_RGB(0, 0, 255), 5);
+			cv::line(colorImageSkeletonHand, cv::Point(handVertices[j].x * 2, handVertices[j].y * 2), cv::Point(handVertices[(j + 1) % 4].x * 2, handVertices[(j + 1) % 4].y * 2), CV_RGB(0, 0, 255), 5);
 		}
 	}
 }
@@ -585,32 +593,39 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 		{
 			glm::vec3 landmarkIndexFinger = trackF->hand->landmarks[mp_hand_landmark_index_finger_tip];
 			// Correct for down sample
-			glm::vec3 posIndexFinger = toScreenSpace(getFilteredPoint(landmarkIndexFinger, trackF->hand->capture));
-			trackF->hand->cachedIndexFinger = posIndexFinger;
-			landmarks.push_back(posIndexFinger);
+			glm::vec3 posIndexFinger = getFilteredPoint(landmarkIndexFinger, trackF->hand->capture);
+			glm::vec3 posIndexFingerScreenSpace = toScreenSpace(posIndexFinger);
+			trackF->hand->cachedIndexFinger = posIndexFingerScreenSpace;
+			landmarks.push_back(posIndexFingerScreenSpace);
 
 			glm::vec3 landmarkThumb = trackF->hand->landmarks[mp_hand_landmark_thumb_tip];
 			// Correct for down sample
-			glm::vec3 posThumb = toScreenSpace(getFilteredPoint(landmarkThumb, trackF->hand->capture));
-			trackF->hand->cachedThumb = posThumb;
+			glm::vec3 posThumb = getFilteredPoint(landmarkThumb, trackF->hand->capture);
+			glm::vec3 posThumbScreenSpace = toScreenSpace(posThumb);
+			trackF->hand->cachedThumb = posThumbScreenSpace;
 
-			landmarks.push_back(posThumb);
+			landmarks.push_back(posThumbScreenSpace);
 			// Add 'index' finger details to 'hand'.
 			nlohmann::json hand;
 			hand["time"] = currentTimeInMilliseconds;
 			hand["index"] = {
-				{"x", posIndexFinger.x},
-				{"y", posIndexFinger.y},
-				{"z", posIndexFinger.z}};
+				{"x", posIndexFingerScreenSpace.x},
+				{"y", posIndexFingerScreenSpace.y},
+				{"z", posIndexFingerScreenSpace.z}};
 
 			// Add 'thumb' details to 'hand'.
 			hand["thumb"] = {
-				{"x", posThumb.x},
-				{"y", posThumb.y},
-				{"z", posThumb.z}};
+				{"x", posThumbScreenSpace.x},
+				{"y", posThumbScreenSpace.y},
+				{"z", posThumbScreenSpace.z}};
 
 			// Push the 'hand' object to 'jsonLog' under key 'hand'.
 			jsonLog["hand"].push_back(hand);
+
+			std::cout << "Index Pos: " << glm::to_string(posIndexFingerScreenSpace) << std::endl;
+			std::cout << "Thumb Pos: " << glm::to_string(posThumbScreenSpace) << std::endl;
+			std::cout << std::endl;
+			std::cout << std::endl;
 		}
 
 		if (glm::distance(landmarks[0], landmarks[1]) < 18.0f)
@@ -688,6 +703,10 @@ cv::Mat Tracker::getDepthImageImportant()
 {
 	return depthImageImportant;
 }
+cv::Mat Tracker::getDepthImageOriginal()
+{
+	return depthImageOriginal;
+}
 
 cv::Mat Tracker::getColorImage()
 {
@@ -703,8 +722,20 @@ cv::Mat Tracker::getColorImageSkeletons()
 {
 	return colorImageSkeletons;
 }
+cv::Mat Tracker::getColorImageSkeletonFace()
+{
+	return colorImageSkeletonFace;
+}
 
+cv::Mat Tracker::getColorImageSkeletonHand()
+{
+	return colorImageSkeletonHand;
+}
 
+bool Tracker::isReady()
+{
+	return ready;
+}
 
 Tracker::~Tracker()
 {

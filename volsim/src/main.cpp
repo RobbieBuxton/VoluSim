@@ -38,35 +38,40 @@ extern "C"
 	{
 		debugInitPrint();
 		// GLuint maxPixelWidth = 3840;
-		//qw GLuint maxPixelHeight = 2160;
+		// qw GLuint maxPixelHeight = 2160;
 		// GLuint pixelWidth = 3840;
 		// GLuint pixelHeight = 2160;
+		// GLfloat dWidth = 70.5f;
+		// GLfloat dHeight = 39.5f;
+		// GLfloat dDepth = 0.01f;
 
-		GLuint maxPixelWidth = 1920; 
-		GLuint maxPixelHeight = 1200;
-		GLuint pixelWidth = 1920;
-		GLuint pixelHeight = 1200;
+		GLuint pixelWidth = 1200;
+		GLuint pixelHeight = 1920;
+		GLfloat dHeight = 52.0f;
+		GLfloat dWidth = 32.5f;
+		GLfloat dDepth = 0.01f;
+
 		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
 
+		bool debug = true;
+
 		// Robbie's Screen
-		// Depth is artifical the others are real
-		GLfloat dWidth = 70.5f;
-		GLfloat dHeight = 39.5f;
-		GLfloat dDepth = 0.01f;
-		GLfloat pixelScaledWidth = dWidth * ((GLfloat)pixelWidth / (GLfloat)maxPixelWidth);
-		GLfloat pixelScaledHeight = dHeight * ((GLfloat)pixelHeight / (GLfloat)maxPixelHeight);
-		Display display(glm::vec3(0.0f, 0.f, 0.f), pixelScaledWidth, pixelScaledHeight, dDepth, 1.0f, 1000.0f);
+		Display display(glm::vec3(0.0f, 0.f, 0.f), dWidth, dHeight, dDepth, 1.0f, 1000.0f);
 		std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
-		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, dHeight, 0.0), 30.0f);
+		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, 62.0f, 37.0f), 127.5f, debug);
 
 		std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 		std::thread captureThread(pollCapture, trackerPtr.get(), window);
 
 		// render loop
 		// -----------
-
-		Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
-		Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
+		Image colourCamera = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.80));
+		Image colourCameraSkeleton = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.80));
+		Image colourCameraSkeletonFace = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.80));
+		Image colourCameraSkeletonHand = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.80));
+		Image colourCameraImportant = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.80));
+		Image depthCamera = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.80));
+		Image depthCameraImportant = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.80));
 		Image debugInfo = Image(glm::vec2(0.99, 0.89), glm::vec2(0.89, 0.99));
 
 		// Timing variables
@@ -86,19 +91,35 @@ extern "C"
 		}
 		nlohmann::json jsonOutput;
 		// Get current time in milliseconds
-		auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::system_clock::now().time_since_epoch())
-			.count();
+		auto startTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+										   std::chrono::system_clock::now().time_since_epoch())
+										   .count();
+		
+		auto currentTimeInMilliseconds = startTimeInMilliseconds;
 
 		// Assign the time to the "startTime" key in the JSON object
 		jsonOutput["startTime"] = currentTimeInMilliseconds;
-
 		Challenge challenge = Challenge(renderer, hand, challengeNum);
-
+		while (!trackerPtr->isReady())
+		{
+			std::cout << "Waiting for tracker" << std::endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 		while (!glfwWindowShouldClose(window))
 		{
 			// Measure speed
 			double currentTime = glfwGetTime();
+
+			currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+											std::chrono::system_clock::now().time_since_epoch())
+											.count();
+
+			if ((currentTimeInMilliseconds - startTimeInMilliseconds) > 60000)
+			{
+				std::cout << "Timeout: " << (currentTimeInMilliseconds - startTimeInMilliseconds) << "ms" << std::endl;
+				glfwSetWindowShouldClose(window, true);
+			}
+
 			// Check if the eye position has changed
 			if (trackerMode == TRACKER || trackerMode == TRACKEROFFSET)
 			{
@@ -120,38 +141,50 @@ extern "C"
 
 			if (currentTime - lastTime >= 1.0)
 			{
-				debugInfo.updateImage(generateDebugPrintBox(nbFrames));
+				if (debug)
+				{
+					debugInfo.updateImage(generateDebugPrintBox(nbFrames));
+				}
 				nbFrames = 0;
 				lastTime += 1.0;
 			}
 
-			processInput(window);
-
-			renderer->clear();
 			renderer->updateEyePos(currentEyePos);
 
-			// Need to convert this to render with opengl rather than opencv
-			if (!trackerPtr->getColorImage().empty())
-				colourCamera.updateImage(trackerPtr->getColorImage());
-
-			if (!trackerPtr->getDepthImage().empty())
+			if (debug)
 			{
-				depthCamera.updateImage(trackerPtr->getDepthImage());
+				// Need to convert this to render with opengl rather than opencv
+				if (!trackerPtr->getColorImage().empty())
+				{
+					colourCameraSkeleton.updateImage(trackerPtr->getColorImageSkeletons());
+				}
+				if (!trackerPtr->getDepthImage().empty())
+				{
+					depthCameraImportant.updateImage(trackerPtr->getDepthImageImportant());
+				}
 			}
 
 			hand->updateLandmarks(trackerPtr->getHandLandmarks());
-			hand->draw();
-
 			challenge.update();
+
+
+			processInput(window);
+			renderer->clear();
+			hand->draw();
 			challenge.draw();
+
+			if (debug)
+			{
+				renderer->drawImage(debugInfo);
+				renderer->drawImage(colourCameraSkeleton);
+				renderer->drawImage(depthCameraImportant);
+			}
+			// renderer->drawRoom();
+			// renderer->renderErato();
 			if (challenge.isFinished())
 			{
 				glfwSetWindowShouldClose(window, true);
 			}
-
-			renderer->drawImage(debugInfo);
-			renderer->drawImage(colourCamera);
-			renderer->drawImage(depthCamera);
 
 			glfwSwapBuffers(window);
 			glfwPollEvents();
@@ -159,14 +192,19 @@ extern "C"
 		trackerThread.join();
 		captureThread.join();
 
-		Image colourCameraSkeleton = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
-		colourCameraSkeleton.updateImage(trackerPtr->getColorImageSkeletons());
-		Image colourCameraImportant = Image(glm::vec2(0.01, 0.99), glm::vec2(0.16, 0.84));
-		colourCameraImportant.updateImage(trackerPtr->getColorImageImportant());
-		Image depthCameraImportant = Image(glm::vec2(0.17, 0.99), glm::vec2(0.32, 0.84));
-		depthCameraImportant.updateImage(trackerPtr->getDepthImageImportant());
+		if (debug)
+		{
+			colourCamera.updateImage(trackerPtr->getColorImage());
+			colourCameraSkeleton.updateImage(trackerPtr->getColorImageSkeletons());
+			colourCameraSkeletonFace.updateImage(trackerPtr->getColorImageSkeletonFace());
+			colourCameraSkeletonHand.updateImage(trackerPtr->getColorImageSkeletonHand());
 
-		saveDebugInfo(*trackerPtr, colourCamera, colourCameraSkeleton, colourCameraImportant,  depthCamera,  depthCameraImportant, *hand);
+			colourCameraImportant.updateImage(trackerPtr->getColorImageImportant());
+			depthCamera.updateImage(trackerPtr->getDepthImage());
+			depthCameraImportant.updateImage(trackerPtr->getDepthImageImportant());
+
+			saveDebugInfo(*trackerPtr, colourCamera, colourCameraSkeleton, colourCameraSkeletonFace, colourCameraSkeletonHand, colourCameraImportant, depthCamera, depthCameraImportant, *hand);
+		}
 
 		jsonOutput["results"] = challenge.returnJson();
 		jsonOutput["trackerLogs"] = trackerPtr->returnJson();
@@ -181,7 +219,7 @@ extern "C"
 	}
 }
 
-void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera,  Image &colourCameraSkeleton, Image &colourCameraImportant, Image &depthCamera, Image &depthCameraImportant, Hand &hand)
+void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera, Image &colourCameraSkeleton, Image &colourCameraSkeletonFace, Image &colourCameraSkeletonHand, Image &colourCameraImportant, Image &depthCamera, Image &depthCameraImportant, Hand &hand)
 {
 	std::string miscPath = "/home/robbieb/Projects/VolumetricSim/misc/";
 
@@ -194,12 +232,12 @@ void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera,  Image &colourCamer
 	std::cout << "Saving Colour Camera" << std::endl;
 	colourCamera.save(miscPath + "colourImage.png");
 	colourCameraSkeleton.save(miscPath + "colourImageSkeleton.png");
+	colourCameraSkeletonFace.save(miscPath + "colourImageSkeletonFace.png");
+	colourCameraSkeletonHand.save(miscPath + "colourImageSkeletonHand.png");
 	colourCameraImportant.save(miscPath + "colourImageImportant.png");
 	std::cout << "Saving Depth Camera" << std::endl;
 	depthCamera.save(miscPath + "depthImage.png");
 	depthCameraImportant.save(miscPath + "depthImageImportant.png");
-
-
 
 	std::cout << "Saving Eye Pos Left" << std::endl;
 	std::optional<glm::vec3> leftEyePos = trackerPtr.getLeftEyePos();

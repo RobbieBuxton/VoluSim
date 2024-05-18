@@ -17,35 +17,42 @@ def visualize_point_cloud_pyvista(file_path, left_eye_path, hand_path, z_min=0, 
     z_normalized = np.clip(z_normalized, 0, 1)  # Ensure values are between 0 and 1
     
     point_cloud = pv.PolyData(filtered_data[:, :3])
-    plotter = pv.Plotter(off_screen=True)  # Enable off-screen rendering
     
-    # Use the 'coolwarm' colormap, with colors based on normalized z-values
-    plotter.add_points(point_cloud, color=(0,115,192), point_size=1.)
-    
-    # Add left eye position to the plot using spheres
+    # Plot with eye position
+    plotter_eye = pv.Plotter(off_screen=True)
+    plotter_eye.add_points(point_cloud, color=(0, 115, 192), point_size=1.5)
     eye_cloud = pv.PolyData(left_eye_pos.reshape(1, -1))  # Reshape needed if left_eye_pos is a single point
     eye_glyph = eye_cloud.glyph(scale=False, geom=pv.Sphere(radius=1.0))
-    plotter.add_mesh(eye_glyph, color=(255, 124, 55))
+    plotter_eye.add_mesh(eye_glyph, color=(255, 124, 55))
     
-    # Add hand positions to the plot using spheres
+    plotter_eye.view_isometric()
+    plotter_eye.view_xy()
+    scale = 75
+    plotter_eye.camera.position = (-scale, scale, -scale)
+    plotter_eye.window_size = (1920, 1080)
+    plotter_eye.background_color = None  # None sets it to transparent
+    
+    screenshot_eye_filename = "misc/output_eye.png"
+    plotter_eye.screenshot(screenshot_eye_filename)
+    plotter_eye.close()
+    
+    # Plot with hand positions
+    plotter_hand = pv.Plotter(off_screen=True)
+    plotter_hand.add_points(point_cloud, color=(0, 115, 192), point_size=1.5)
     hand_cloud = pv.PolyData(hand_positions)
     hand_glyph = hand_cloud.glyph(scale=False, geom=pv.Sphere(radius=1.0))
-    plotter.add_mesh(hand_glyph, color=(143,69,163))
+    plotter_hand.add_mesh(hand_glyph, color=(143, 69, 163))
     
-    plotter.view_isometric()
-    plotter.view_xy()
-    scale = 100
-    plotter.camera.position = (-scale, scale, -scale)
+    plotter_hand.view_isometric()
+    plotter_hand.view_xy()
+    plotter_hand.camera.position = (-scale, scale, -scale)
+    plotter_hand.window_size = (1920, 1080)
+    plotter_hand.background_color = None  # None sets it to transparent
     
-    plotter.window_size = (1920, 1080)
-    
-    # Set transparent background
-    plotter.background_color = None  # None sets it to transparent
-
-    # Save screenshot with transparent background
-    screenshot_filename = "misc/output.png"
-    plotter.screenshot(screenshot_filename)
-    plotter.close()  # Explicitly close the plotter
+    screenshot_hand_filename = "misc/output_hand.png"
+    plotter_hand.screenshot(screenshot_hand_filename)
+    plotter_hand.close()
 
 # Usage example
 visualize_point_cloud_pyvista("misc/pointCloud.csv", "misc/leftEyePos.csv", "misc/hand.csv")
+

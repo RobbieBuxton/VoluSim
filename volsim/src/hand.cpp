@@ -2,6 +2,7 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 Hand::Hand(std::shared_ptr<Renderer> renderer, glm::vec3 offset)
 {
@@ -15,6 +16,10 @@ void Hand::updateLandmarks(std::optional<std::vector<glm::vec3>> inputLandmarks)
     {
         index = inputLandmarks.value()[0] + offset;
         thumb = inputLandmarks.value()[1] + offset;
+		// std::cout << "Index Pos: " << glm::to_string(index) << std::endl;
+		// std::cout << "Thumb Pos: " << glm::to_string(thumb) << std::endl;
+		// std::cout << std::endl;
+		// std::cout << std::endl;
     }
 }
 

@@ -35,7 +35,7 @@ using net_type = dlib::loss_mmod<dlib::con<1, 9, 9, 1, 1, rcon5<rcon5<rcon5<down
 class Tracker
 {
 public:
-    Tracker(glm::vec3 initCameraOffset, float yRot);
+    Tracker(glm::vec3 initCameraOffset, float yRot, bool debug = false);
     ~Tracker();
     void update();
     void close();
@@ -44,12 +44,16 @@ public:
     std::optional<std::vector<glm::vec3>> getHandLandmarks();
     cv::Mat getDepthImage();
 	cv::Mat getDepthImageImportant();
+	cv::Mat getDepthImageOriginal();
     cv::Mat getColorImage();
 	cv::Mat getColorImageImportant();
 	cv::Mat getColorImageSkeletons();
+	cv::Mat getColorImageSkeletonFace();
+	cv::Mat getColorImageSkeletonHand();
     std::vector<glm::vec3> getPointCloud();
     void getLatestCapture();
     nlohmann::json returnJson();
+	bool isReady();
 
 private:
     class Capture
@@ -97,9 +101,17 @@ private:
 
     dlib::shape_predictor predictor;
 
+
+	bool ready; // If the tracker is ready to be used
+
+	//Debug Images
+	bool debug;
     cv::Mat colorImage;
 	cv::Mat colorImageSkeletons;
+	cv::Mat colorImageSkeletonFace;
+	cv::Mat colorImageSkeletonHand;
 	cv::Mat colorImageImportant;
+	cv::Mat depthImageOriginal;
     cv::Mat depthImage;
 	cv::Mat depthImageImportant;
 

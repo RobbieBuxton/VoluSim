@@ -21,14 +21,14 @@ public:
     void drawRoom();
     void updateEyePos(glm::vec3 currentEyePos);
     void clear();
-	void renderHouse();
+	void renderErato();
 private:
     void setupShader();
     std::unique_ptr<Model> sphere;
     std::unique_ptr<Model> line;
 	std::unique_ptr<Model> cube;
     std::unique_ptr<Model> room;
-	std::unique_ptr<Model> house;
+	// std::unique_ptr<Model> erato;
     std::unique_ptr<Shader> modelShader;
     std::unique_ptr<Shader> imageShader;
     std::unique_ptr<Display> display;
