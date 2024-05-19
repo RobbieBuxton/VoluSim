@@ -51,7 +51,14 @@ extern "C"
 		// Robbie's Screen
 		Display display(glm::vec3(0.0f, 0.f, 0.f), dWidth, dHeight, dDepth, 1.0f, 1000.0f);
 		std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
-		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(camera_x, camera_y, camera_z), camera_rot, debug);
+
+		float extra_x_offset = 0;
+		if (trackerMode == TRACKEROFFSET)
+		{
+			extra_x_offset = 62.5f;
+		}
+
+		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(camera_x - extra_x_offset, camera_y, camera_z), camera_rot, debug);
 
 		std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 		std::thread captureThread(pollCapture, trackerPtr.get(), window);
@@ -73,15 +80,8 @@ extern "C"
 
 		glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-		std::shared_ptr<Hand> hand;
-		if (trackerMode == TRACKEROFFSET)
-		{
-			hand = std::make_shared<Hand>(renderer, glm::vec3(5.0f, 0.0f, 0.0f));
-		}
-		else
-		{
-			hand = std::make_shared<Hand>(renderer, glm::vec3(0.0f, 0.0f, 0.0f));
-		}
+		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, 0.0f, 0.0f));
+	
 		nlohmann::json jsonOutput;
 		// Get current time in milliseconds
 		auto startTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(

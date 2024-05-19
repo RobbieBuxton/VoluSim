@@ -13,7 +13,7 @@ from bson import ObjectId
 camera_x, camera_y, camera_z, camera_rot = 1, 70, 30, 115.0
 
 # Define the Mode enumeration in Python using a dictionary for simplicity
-mode_map = {"t": "TRACKER", "to": "OFFSET", "s": "STATIC"}
+mode_map = {"t": "TRACKER", "o": "OFFSET", "s": "STATIC"}
 
 # Map from shorthand mode to an integer for ctypes
 mode_ctypes_map = {"TRACKER": 0,  "OFFSET": 1, "STATIC": 2}

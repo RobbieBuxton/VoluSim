@@ -96,7 +96,7 @@ void Challenge::update()
 				break;
 			}
 
-			if (!segment.completed && glm::distance(segment.end, grabPos) < segment.radius * 3)
+			if (!segment.completed && (glm::distance(segment.end, grabPos) < (segment.radius * 3)))
 			{
 				segment.completed = true;
 				segment.completedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -141,7 +141,7 @@ void Challenge::draw()
 		{
 			if (lastSegment.completed)
 			{
-				if (grabbing && glm::distance(segment.start, grabPos) < 10.0f)
+				if (grabbing)
 				{
 					renderer->drawLine(segment.start, grabPos, segment.radius, 2);
 				}
