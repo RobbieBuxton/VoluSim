@@ -1,18 +1,5 @@
-up
-forward
-forward
-down
-right
-right
-down
-back
-back
-up
-right
-right
-up
-forward
-forward
-down
-right 
-right
+right 3.0
+forward 3.0
+up 16.0
+forward 3.0
+right 3.0

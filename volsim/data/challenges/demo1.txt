@@ -1,17 +1,4 @@
-up
-up
-up
-right
-right
-right
-forward
-forward
-forward
-down
-down
-down
-left
-left
-left
-back
-back
+up 8.0
+right 6.0
+up 8.0
+forward 6.0

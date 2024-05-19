@@ -28,7 +28,7 @@ private:
     std::unique_ptr<Model> line;
 	std::unique_ptr<Model> cube;
     std::unique_ptr<Model> room;
-	// std::unique_ptr<Model> erato;
+	// std::unique_ptr<Model> er`ato;
     std::unique_ptr<Shader> modelShader;
     std::unique_ptr<Shader> imageShader;
     std::unique_ptr<Display> display;
