@@ -34,7 +34,7 @@ extern "C"
 {
 	static std::string outputString;
 
-	const char *runSimulation(Mode trackerMode, int challengeNum)
+	const char *runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot)
 	{
 		debugInitPrint();
 		// GLuint maxPixelWidth = 3840;
@@ -48,7 +48,7 @@ extern "C"
 		GLuint pixelWidth = 1200;
 		GLuint pixelHeight = 1920;
 		GLfloat dHeight = 52.0f;
-		GLfloat dWidth = 32.5f;
+		GLfloat dWidth = 34.0f;
 		GLfloat dDepth = 0.01f;
 
 		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
@@ -58,7 +58,7 @@ extern "C"
 		// Robbie's Screen
 		Display display(glm::vec3(0.0f, 0.f, 0.f), dWidth, dHeight, dDepth, 1.0f, 1000.0f);
 		std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
-		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(0.0f, 62.0f, 37.0f), 127.5f, debug);
+		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(camera_x, camera_y, camera_z), camera_rot, debug);
 
 		std::thread trackerThread(pollTracker, trackerPtr.get(), window);
 		std::thread captureThread(pollCapture, trackerPtr.get(), window);
@@ -81,7 +81,7 @@ extern "C"
 		glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 		std::shared_ptr<Hand> hand;
-		if (trackerMode == TRACKEROFFSET || trackerMode == STATIC)
+		if (trackerMode == TRACKEROFFSET)
 		{
 			hand = std::make_shared<Hand>(renderer, glm::vec3(5.0f, 0.0f, 0.0f));
 		}
@@ -136,7 +136,7 @@ extern "C"
 			}
 			else if (trackerMode == STATIC)
 			{
-				currentEyePos = glm::vec3(-8.707056f, 21.150419f, 60.079052f);
+				currentEyePos = glm::vec3(0.0f, -45.0f, 40.0f);
 			}
 
 			if (currentTime - lastTime >= 1.0)

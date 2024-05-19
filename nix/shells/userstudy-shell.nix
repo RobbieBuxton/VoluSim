@@ -7,6 +7,7 @@ pkgs.mkShell {
     python311Packages.click
     python311Packages.bson
     python311Packages.tabulate
+    python311Packages.pyvista
   ];
 
   shellHook =

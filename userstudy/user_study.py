@@ -3,8 +3,14 @@ import os
 import json
 import click
 import tabulate
+import pyvista as pv
+import numpy as np
+
 from pymongo import MongoClient
 from bson import ObjectId
+
+# Camera Offser
+camera_x, camera_y, camera_z, camera_rot = 1, 70, 30, 115.0
 
 # Define the Mode enumeration in Python using a dictionary for simplicity
 mode_map = {"t": "TRACKER", "to": "OFFSET", "s": "STATIC"}
@@ -17,6 +23,23 @@ def cli():
     """ Command line interface for managing operations. """
     pass
 
+@cli.command()
+def debug():
+      # Set the path to the library
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    parent_dir = os.path.dirname(dir_path)
+    lib_path = os.path.join(parent_dir, "result/bin/libvolsim.so")
+    handle = ctypes.CDLL(lib_path)
+
+    # Specify the types of the input parameters and the return type for runSimulation
+    handle.runSimulation.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float]
+    handle.runSimulation.restype = ctypes.c_char_p
+
+    # Call the function
+    result = handle.runSimulation(0, 1, camera_x, camera_y, camera_z, camera_rot)
+    _ = result.decode("utf-8")  # Decode the result from bytes to string
+    visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    
 @cli.command()
 @click.option(
     "-m",
@@ -74,11 +97,11 @@ def run(m, n, u, test):
     handle = ctypes.CDLL(lib_path)
 
     # Specify the types of the input parameters and the return type for runSimulation
-    handle.runSimulation.argtypes = [ctypes.c_int, ctypes.c_int]
+    handle.runSimulation.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float]
     handle.runSimulation.restype = ctypes.c_char_p
 
     # Call the function
-    result = handle.runSimulation(mode_ctypes, num)
+    result = handle.runSimulation(mode_ctypes, num, camera_x, camera_y, camera_z, camera_rot)
     output = result.decode("utf-8")  # Decode the result from bytes to string
     
     if not test:
@@ -186,6 +209,54 @@ def connect_to_mongo():
     mydatabase = client["user_study_db"]
 
     return mydatabase
+
+def visualize_point_cloud_pyvista(file_path, z_min=0, z_max=500, distance_threshold=1000):
+    data = np.loadtxt(file_path, delimiter=',', skiprows=1)
+
+    # Create a mask that includes points close to the eyes or hands
+    filtered_data = data
+    
+    # Normalize z-values for color mapping
+    z_normalized = (filtered_data[:, 2] - z_min) / (z_max - z_min)
+    z_normalized = np.clip(z_normalized, 0, 1)  # Ensure values are between 0 and 1
+    
+    point_cloud = pv.PolyData(filtered_data[:, :3])
+    plotter = pv.Plotter()
+    
+    # Use the 'coolwarm' colormap, with colors based on normalized z-values
+    plotter.add_points(point_cloud, scalars=z_normalized, cmap="coolwarm", point_size=1.5)
+    
+    # Define the four points
+    width = 34.0
+    height = 52.0
+    points = np.array([
+        [-width/2, 0, 0],
+        [width/2, 0, 0],
+        [-width/2, height, 0],
+        [width/2, height, 0]
+    ])
+    
+    # Add the points to the plotter
+    plotter.add_points(points, color='green', point_size=10)
+
+    # Define the rectangle edges
+    edges = np.array([
+        [points[0], points[1]],
+        [points[1], points[3]],
+        [points[3], points[2]],
+        [points[2], points[0]]
+    ])
+    
+    # Add the rectangle edges to the plotter
+    for edge in edges:
+        plotter.add_lines(edge, color='yellow', width=5)
+    
+    plotter.view_xz()
+    plotter.camera.position = (1, 1, 0)
+    
+    plotter.add_axes(interactive=False, line_width=5, labels_off=False)
+
+    plotter.show()
 
 if __name__ == "__main__":
     cli()
