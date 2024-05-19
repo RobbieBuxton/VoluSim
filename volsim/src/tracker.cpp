@@ -526,9 +526,9 @@ void Tracker::debugDraw()
 			}
 		}
 
-		cv::Point2f thumb = cv::Point2f((float)trackF->hand->landmarks[mp_hand_landmark_thumb_tip].x * 2, (float)trackF->hand->landmarks[mp_hand_landmark_thumb_tip].y * 2);
-		cv::circle(colorImageImportant, thumb, 20, cv::Scalar(163, 69, 143), -1);
-		cv::circle(depthImageImportant, thumb, 20, cv::Scalar(163, 69, 143), -1);
+		cv::Point2f middle = cv::Point2f((float)trackF->hand->landmarks[mp_hand_landmark_middle_finger_tip].x * 2, (float)trackF->hand->landmarks[mp_hand_landmark_middle_finger_tip].y * 2);
+		cv::circle(colorImageImportant, middle, 20, cv::Scalar(163, 69, 143), -1);
+		cv::circle(depthImageImportant, middle, 20, cv::Scalar(163, 69, 143), -1);
 		cv::Point2f index = cv::Point2f((float)trackF->hand->landmarks[mp_hand_landmark_index_finger_tip].x * 2, (float)trackF->hand->landmarks[mp_hand_landmark_index_finger_tip].y * 2);
 		cv::circle(colorImageImportant, index, 20, cv::Scalar(163, 69, 143), -1);
 		cv::circle(depthImageImportant, index, 20, cv::Scalar(163, 69, 143), -1);
@@ -583,11 +583,11 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 	{
 		std::vector<glm::vec3> landmarks;
 
-		// There will always be a thumb if there is a finger
+		// There will always be a middle if there is a finger
 		if (trackF->hand->cachedIndexFinger.has_value())
 		{
 			landmarks.push_back(trackF->hand->cachedIndexFinger.value());
-			landmarks.push_back(trackF->hand->cachedThumb.value());
+			landmarks.push_back(trackF->hand->cachedMiddleFinger.value());
 		}
 		else
 		{
@@ -596,15 +596,16 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 			glm::vec3 posIndexFinger = getFilteredPoint(landmarkIndexFinger, trackF->hand->capture);
 			glm::vec3 posIndexFingerScreenSpace = toScreenSpace(posIndexFinger);
 			trackF->hand->cachedIndexFinger = posIndexFingerScreenSpace;
+			
 			landmarks.push_back(posIndexFingerScreenSpace);
 
-			glm::vec3 landmarkThumb = trackF->hand->landmarks[mp_hand_landmark_thumb_tip];
+			glm::vec3 landmarkMiddleFinger = trackF->hand->landmarks[mp_hand_landmark_middle_finger_tip];
 			// Correct for down sample
-			glm::vec3 posThumb = getFilteredPoint(landmarkThumb, trackF->hand->capture);
-			glm::vec3 posThumbScreenSpace = toScreenSpace(posThumb);
-			trackF->hand->cachedThumb = posThumbScreenSpace;
+			glm::vec3 posMiddleFinger = getFilteredPoint(landmarkMiddleFinger, trackF->hand->capture);
+			glm::vec3 posMiddleFingerScreenSpace = toScreenSpace(posMiddleFinger);
+			trackF->hand->cachedMiddleFinger = posMiddleFingerScreenSpace;
 
-			landmarks.push_back(posThumbScreenSpace);
+			landmarks.push_back(posMiddleFingerScreenSpace);
 			// Add 'index' finger details to 'hand'.
 			nlohmann::json hand;
 			hand["time"] = currentTimeInMilliseconds;
@@ -613,17 +614,17 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 				{"y", posIndexFingerScreenSpace.y},
 				{"z", posIndexFingerScreenSpace.z}};
 
-			// Add 'thumb' details to 'hand'.
-			hand["thumb"] = {
-				{"x", posThumbScreenSpace.x},
-				{"y", posThumbScreenSpace.y},
-				{"z", posThumbScreenSpace.z}};
+			// Add 'middle' details to 'hand'.
+			hand["middle"] = {
+				{"x", posMiddleFingerScreenSpace.x},
+				{"y", posMiddleFingerScreenSpace.y},
+				{"z", posMiddleFingerScreenSpace.z}};
 
 			// Push the 'hand' object to 'jsonLog' under key 'hand'.
 			jsonLog["hand"].push_back(hand);
 
 			std::cout << "Index Pos: " << glm::to_string(posIndexFingerScreenSpace) << std::endl;
-			std::cout << "Thumb Pos: " << glm::to_string(posThumbScreenSpace) << std::endl;
+			std::cout << "Middle Pos: " << glm::to_string(posMiddleFingerScreenSpace) << std::endl;
 			std::cout << std::endl;
 			std::cout << std::endl;
 		}

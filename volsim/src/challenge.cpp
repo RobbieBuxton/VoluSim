@@ -96,7 +96,7 @@ void Challenge::update()
 				break;
 			}
 
-			if (!segment.completed && glm::distance(segment.end, grabPos) < 0.5)
+			if (!segment.completed && glm::distance(segment.end, grabPos) < segment.radius * 3)
 			{
 				segment.completed = true;
 				segment.completedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());

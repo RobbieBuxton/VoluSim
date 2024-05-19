@@ -20,7 +20,7 @@ public:
 
 private:
     glm::vec3 index;
-    glm::vec3 thumb;
+    glm::vec3 middle;
     glm::vec3 offset;
     std::shared_ptr<Renderer> renderer;
 };

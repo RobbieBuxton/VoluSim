@@ -37,13 +37,6 @@ extern "C"
 	const char *runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot)
 	{
 		debugInitPrint();
-		// GLuint maxPixelWidth = 3840;
-		// qw GLuint maxPixelHeight = 2160;
-		// GLuint pixelWidth = 3840;
-		// GLuint pixelHeight = 2160;
-		// GLfloat dWidth = 70.5f;
-		// GLfloat dHeight = 39.5f;
-		// GLfloat dDepth = 0.01f;
 
 		GLuint pixelWidth = 1200;
 		GLuint pixelHeight = 1920;

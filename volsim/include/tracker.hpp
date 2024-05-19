@@ -134,7 +134,7 @@ private:
         glm::vec3 landmarks[21];
         Rectangle box;
 		std::optional<glm::vec3> cachedIndexFinger;
-		std::optional<glm::vec3> cachedThumb;
+		std::optional<glm::vec3> cachedMiddleFinger;
     };
 
     struct FaceLandmarks
