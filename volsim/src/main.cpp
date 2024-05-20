@@ -55,7 +55,7 @@ extern "C"
 		float extra_x_offset = 0;
 		if (trackerMode == TRACKEROFFSET)
 		{
-			extra_x_offset = 62.5f;
+			extra_x_offset = 60.0f;
 		}
 
 		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(camera_x - extra_x_offset, camera_y, camera_z), camera_rot, debug);
@@ -81,7 +81,7 @@ extern "C"
 		glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 		// Offset into fingers as only hits surface
-		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, -0.5f, -0.5f));
+		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, -1.0f, -1.0f));
 	
 		nlohmann::json jsonOutput;
 		// Get current time in milliseconds
@@ -93,7 +93,19 @@ extern "C"
 
 		// Assign the time to the "startTime" key in the JSON object
 		jsonOutput["startTime"] = currentTimeInMilliseconds;
-		Challenge challenge = Challenge(renderer, hand, challengeNum);
+
+		glm::vec3 centre; 
+		
+		if (trackerMode == TRACKEROFFSET)
+		{
+			centre = glm::vec3(-12.0f, 15.0f, 0.0);
+		}
+		else
+		{
+			centre = glm::vec3(0.0, 15.0f, 0.0);
+		}
+
+		Challenge challenge = Challenge(renderer, hand, challengeNum, centre);
 		while (!trackerPtr->isReady())
 		{
 			std::cout << "Waiting for tracker" << std::endl;

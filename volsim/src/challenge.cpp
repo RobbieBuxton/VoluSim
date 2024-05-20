@@ -5,8 +5,9 @@
 #include "filesystem.hpp"
 #include <iostream>
 
-Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> hand, int challengeNum)
+Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> hand, int challengeNum, glm::vec3 centre)
 {
+	this->centre = centre;
 	this->renderer = renderer;
 	this->hand = hand;
 	std::string challengePath;
