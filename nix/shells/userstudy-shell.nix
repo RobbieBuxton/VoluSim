@@ -15,10 +15,10 @@ pkgs.mkShell {
     export PS1="\e[0;33m[\u@\h \W]\$ \e[m"
 
     # Define a function to run your Python script
-    function userstudy() {
-      sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH python3 userstudy/user_study.py "$@"
+    function study() {
+      sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH python3 userstudy/cli.py "$@"
     }
 
-    echo "Type 'userstudy' to start the user study application."
+    echo "Type 'study' to start the user study application."
     '';
 }

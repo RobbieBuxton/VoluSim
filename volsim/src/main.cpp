@@ -80,7 +80,8 @@ extern "C"
 
 		glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, 0.0f, 0.0f));
+		// Offset into fingers as only hits surface
+		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, -0.5f, -0.5f));
 	
 		nlohmann::json jsonOutput;
 		// Get current time in milliseconds
@@ -313,8 +314,25 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
+	// Get the list of monitors
+    int count;
+    GLFWmonitor** monitors = glfwGetMonitors(&count);
+
+    if (count == 0) {
+        std::cerr << "No monitors found" << std::endl;
+    }
+
+    std::cout << "Available monitors:" << std::endl;
+    for (int i = 0; i < count; ++i) {
+        const char* name = glfwGetMonitorName(monitors[i]);
+        std::cout << i << ": " << name << std::endl;
+    }
+	
+	int selectedMonitorIndex = 1;
+	GLFWmonitor* selectedMonitor = monitors[selectedMonitorIndex];
+
 	// Create a GLFWwindow object that we can use for GLFW's functions
-	GLFWwindow *window = glfwCreateWindow(pixelWidth, pixelHeight, "LearnOpenGL", NULL, NULL);
+	GLFWwindow *window = glfwCreateWindow(pixelWidth, pixelHeight, "LearnOpenGL", selectedMonitor, NULL);
 	glfwMakeContextCurrent(window);
 	if (window == NULL)
 	{

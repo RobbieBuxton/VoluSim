@@ -9,8 +9,12 @@ Challenge::Challenge(std::shared_ptr<Renderer> renderer, std::shared_ptr<Hand> h
 {
 	this->renderer = renderer;
 	this->hand = hand;
-
-	std::string challengePath = "data/challenges/demo" + std::to_string(challengeNum) + ".txt";
+	std::string challengePath;
+	if (challengeNum < 0) {
+		challengePath = "data/challenges/demo" + std::to_string(-challengeNum) + ".txt";
+	} else {
+		challengePath = "data/challenges/task" + std::to_string(challengeNum) + ".txt";
+	}
 	std::vector<glm::vec3> directions = loadDirections(FileSystem::getPath(challengePath));
 
 	glm::vec3 point = centre + glm::vec3(-3.0, -8.0, 2.0);
