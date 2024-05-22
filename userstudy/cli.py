@@ -3,10 +3,14 @@ import json
 import click
 import tabulate
 import random
+from statistics import mean, stdev
+import time
 
 #User created
 import utility
 import study
+import mongodb
+import visualize
 
 @click.group()
 def cli():
@@ -25,14 +29,14 @@ def run():
 @run.command()
 def debug():
     study.run_simulation("t", 1)
-    utility.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
 @click.option(
     "-m",
-    type=click.Choice(["t", "o", "s"], case_sensitive=False),
+    type=click.Choice(["t", "to", "s", "so"], case_sensitive=False),
     required=True,
-    help="Mode, t: Tracker, to: TrackerOffset, s: Static"
+    help="Mode, t: Tracker, to: TrackerOffset, s: Static, so: Static Offset"
 )
 @click.option(
     "-n",
@@ -42,13 +46,14 @@ def debug():
 )
 def demo(m,n):
     study.run_simulation(m, -n)
-
+	
 @run.command()
+@click.argument("user_id")
 @click.option(
     "-m",
-    type=click.Choice(["t", "o", "s"], case_sensitive=False),
+    type=click.Choice(["t", "to", "s", "so"], case_sensitive=False),
     required=True,
-    help="Mode, t: Tracker, to: TrackerOffset, s: Static"
+    help="Mode, t: Tracker, to: TrackerOffset, s: Static, so: Static Offset"
 )
 @click.option(
     "-n",
@@ -57,26 +62,20 @@ def demo(m,n):
     help="Challenge number"
 )
 @click.option(
-    "-u",
-    type=str,
-    required=True,
-    help="User ID"
-)
-@click.option(
     "--test", 
     is_flag=True, 
     default=False, 
     help="Enable testing mode"
 )
-def task(m, n, u, test):
+def task(m, n, user_id, test):
     mode = m
     num = n
-    user = u
+    user = user_id
     """ Run the simulation with specific mode, challenge number, and user ID. """
     print("Starting")
     
     if not test:
-        db = utility.connect_to_mongo()
+        db = mongodb.connect_to_mongo()
         users_collection = db["users"]
         results_collection = db["results"]
         
@@ -96,9 +95,6 @@ def task(m, n, u, test):
         # Convert the JSON string to a Python dictionary
         data = json.loads(output)
         print(data["finished"])
-        if (not data["finished"]):
-            print("Simulation did not finish successfully: exiting")
-            return
         
         data['user_id'] = user  # Add the user ID to the data dictionary
         data['mode'] = study.mode_map[mode]  # Store the mode as well
@@ -112,7 +108,7 @@ def task(m, n, u, test):
 @click.argument("user_id")
 def next(user_id):
     # Connect to the MongoDB database
-    db = utility.connect_to_mongo()
+    db = mongodb.connect_to_mongo()
     if db is None:
         print("Failed to connect to MongoDB.")
         return
@@ -146,18 +142,14 @@ def next(user_id):
                 output = study.run_simulation(study.mode_map_inverse[mode], challenge_num)
                 
                 # Convert the JSON string to a Python dictionary
-                data = json.loads(output)
-                if not data["finished"]:
-                    print("Simulation did not finish successfully: exiting")
-                    return
-                
+                data = json.loads(output)            
                 data['user_id'] = user_id
                 data['mode'] = mode
                 data['challenge_num'] = challenge_num
                 
                 result = results_collection.insert_one(data)
                 print("Inserted record id:", result.inserted_id)
-                return
+                time.sleep(5)
 
     print(f"All tasks for User ID {user_id} have been completed.")
 
@@ -171,11 +163,11 @@ def add():
 @click.argument("last_name")
 def user(first_name, last_name):
     """ Adds a user with first and last name to the database. """
-    mydatabase = utility.connect_to_mongo()
+    mydatabase = mongodb.connect_to_mongo()
     user_collection = mydatabase["users"]
     
     random.seed()
-    order = random.sample(["TRACKER", "OFFSET", "STATIC"], k=3)
+    order = random.sample(["TRACKER", "TRACKER_OFFSET", "STATIC", "STATIC_OFFSET"], k=3)
     user_data = {
         "_id": f"{first_name[:3].lower()}{last_name[:3].lower()}", 
         "first_name": first_name,
@@ -197,7 +189,7 @@ def list():
 @list.command()
 def users():
     """ Lists all users in the database. """
-    mydatabase = utility.connect_to_mongo()
+    mydatabase = mongodb.connect_to_mongo()
     user_collection = mydatabase["users"]
 
     for user in user_collection.find():
@@ -206,7 +198,7 @@ def users():
 @list.command()
 def results():
     """ Displays a table with the completion status of each task for every user. """
-    db = utility.connect_to_mongo()
+    db = mongodb.connect_to_mongo()
     if db is None:
         print("Failed to connect to MongoDB.")
         return
@@ -219,13 +211,13 @@ def results():
     
     # Define the table headers
     headers = ["UserID", "First Name", "Last Name"]
-    modes = ["TRACKER", "OFFSET", "STATIC"]
+    modes = ["TRACKER", "TRACKER_OFFSET", "STATIC", "STATIC_OFFSET"]
     challenges = range(1, 6)
     
     # Append mode and challenge number combinations to headers
     for mode in modes:
         for challenge in challenges:
-            headers.append(f"{mode[:1]}-{challenge}")
+            headers.append(f"{study.mode_map_inverse[mode]}-{challenge}")
 
     # Initialize the table rows
     table = []
@@ -246,6 +238,131 @@ def results():
     
     # Print the table using tabulate
     print(tabulate.tabulate(table, headers=headers, tablefmt="grid"))
+
+############
+### View ###
+############
+@cli.group()
+def view():
+    """List various resources."""
+    pass
+
+@view.command()
+@click.argument("user_id")
+def result(user_id):
+    """Displays a table with the average time between completions and the standard deviation for the requested user."""
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    users_collection = db["users"]
+    results_collection = db["results"]
+
+    # Retrieve the user
+    user = users_collection.find_one({"_id": user_id})
+    if not user:
+        print(f"User ID {user_id} does not exist in the database.")
+        return
+    
+    # Define the table headers
+    headers = ["Metric"]
+    modes = ["TRACKER", "TRACKER_OFFSET", "STATIC", "STATIC_OFFSET"]
+    challenges = range(1, 6)
+    
+    # Append mode and challenge number combinations to headers
+    for mode in modes:
+        for challenge in challenges:
+            headers.append(f"{mode[:1]}-{challenge}")
+    
+    # Initialize the table rows
+    avg_row = ["Mean"]
+    std_row = ["Std Dev"]
+    
+    # Check each mode and challenge combination
+    for mode in modes:
+        for challenge in challenges:
+            results = results_collection.find({"user_id": user["_id"], "mode": mode, "challenge_num": challenge})
+            avg_time_diff = "N/A"
+            std_dev_time_diff = "N/A"
+            
+            for result in results:
+                result_list = result["results"]
+                completion_times = [entry["completedTime"] for entry in result_list]
+                
+                if len(completion_times) > 1:
+                    time_differences = [t2 - t1 for t1, t2 in zip(completion_times[:-1], completion_times[1:])]
+                    avg_time_diff = mean(time_differences)
+                    if len(time_differences) > 1:
+                        std_dev_time_diff = stdev(time_differences)
+                    else:
+                        std_dev_time_diff = 0.0
+                else:
+                    avg_time_diff = "N/A"
+                    std_dev_time_diff = "N/A"
+
+            avg_row.append(f"{avg_time_diff:.2f}" if isinstance(avg_time_diff, float) else avg_time_diff)
+            std_row.append(f"{std_dev_time_diff:.2f}" if isinstance(std_dev_time_diff, float) else std_dev_time_diff)
+    
+    # Print the user info and table using tabulate
+    user_info = [["UserID", user["_id"]], ["First Name", user.get("first_name", "")], ["Last Name", user.get("last_name", "")]]
+    print(tabulate.tabulate(user_info, tablefmt="grid"))
+    print(tabulate.tabulate([avg_row, std_row], headers=headers, tablefmt="grid"))
+  
+@view.command()
+@click.argument("user_id")
+@click.option(
+    "-m",
+    type=click.Choice(["t", "to", "s", "so"], case_sensitive=False),
+    required=True,
+    help="Mode, t: Tracker, to: TrackerOffset, s: Static, so: Static Offset"
+)
+@click.option(
+    "-n",
+    type=int,
+    required=True,
+    help="Challenge number"
+)
+def trace(user_id,m,n):
+    mode = m 
+    challenge = n
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    users_collection = db["users"]
+    results_collection = db["results"]
+
+    # Retrieve the user
+    user = users_collection.find_one({"_id": user_id})
+    if not user:
+        print(f"User ID {user_id} does not exist in the database.")
+        return
+    
+    # Fetch the results
+    results = results_collection.find({"user_id": user["_id"], "mode": study.mode_map[mode], "challenge_num": challenge})
+    
+    # Prepare data for PyVista
+    eye_points = []
+    index_finger_points = []
+    middle_finger_points = []
+    for result in results:
+        tracker_logs = result.get("trackerLogs", {})
+        left_eye_logs = tracker_logs.get("leftEye", [])
+        for log in left_eye_logs:
+            eye_points.append([log["x"], log["y"], log["z"]])
+            
+        hand_logs = tracker_logs.get("hand", [])
+        for log in hand_logs:
+            index_finger_points.append([log["index"]["x"], log["index"]["y"], log["index"]["z"]])
+            middle_finger_points.append([log["middle"]["x"], log["middle"]["y"], log["middle"]["z"]])
+    
+    if not eye_points:
+        print("No points found for the given parameters.")
+        return
+
+    visualize.plot_trace(eye_points,index_finger_points,middle_finger_points)
 
 if __name__ == "__main__":
     cli()

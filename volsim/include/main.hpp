@@ -13,8 +13,9 @@
 enum Mode
 {
     TRACKER = 0,
-    TRACKEROFFSET = 1,
+    TRACKER_OFFSET = 1,
     STATIC = 2,
+	STATIC_OFFSET = 3,
 };
 
 extern "C" const char* runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot);

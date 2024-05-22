@@ -5,14 +5,14 @@ import os
 
 
 # Camera Offser
-camera_x, camera_y, camera_z, camera_rot = 2, 66, 30, 115.0
+camera_x, camera_y, camera_z, camera_rot = 3.25, 69.5, 30.0, 115.0
 
 # Define the Mode enumeration in Python using a dictionary for simplicity
-mode_map = {"t": "TRACKER", "o": "OFFSET", "s": "STATIC"}
+mode_map = {"t": "TRACKER", "s": "STATIC", "to": "TRACKER_OFFSET", "so": "STATIC_OFFSET"}
 mode_map_inverse = {v: k for k, v in mode_map.items()}
 
 # Map from shorthand mode to an integer for ctypes
-mode_ctypes_map = {"TRACKER": 0,  "OFFSET": 1, "STATIC": 2}
+mode_ctypes_map = {"TRACKER": 0,  "TRACKER_OFFSET": 1, "STATIC": 2, "STATIC_OFFSET": 3}
 
 def run_simulation(mode, challenge_num):
     mode_full = mode_map[mode]  # Convert input mode shorthand to full mode

@@ -8,6 +8,7 @@ pkgs.mkShell {
     python311Packages.bson
     python311Packages.tabulate
     python311Packages.pyvista
+    python311Packages.kivy
   ];
 
   shellHook =

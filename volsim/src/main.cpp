@@ -36,7 +36,7 @@ extern "C"
 
 	const char *runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot)
 	{
-		debugInitPrint();
+		// debugInitPrint();
 
 		GLuint pixelWidth = 1200;
 		GLuint pixelHeight = 1920;
@@ -53,7 +53,7 @@ extern "C"
 		std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
 
 		float extra_x_offset = 0;
-		if (trackerMode == TRACKEROFFSET)
+		if (trackerMode == TRACKER_OFFSET || trackerMode == STATIC_OFFSET)
 		{
 			extra_x_offset = 60.0f;
 		}
@@ -78,7 +78,7 @@ extern "C"
 		double lastTime = glfwGetTime();
 		int nbFrames = 0;
 
-		glm::vec3 currentEyePos = glm::vec3(0.0f, 0.0f, 0.0f);
+		glm::vec3 currentEyePos;
 
 		// Offset into fingers as only hits surface
 		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, -1.0f, -1.0f));
@@ -96,7 +96,7 @@ extern "C"
 
 		glm::vec3 centre; 
 		
-		if (trackerMode == TRACKEROFFSET)
+		if (trackerMode == TRACKER_OFFSET || trackerMode == STATIC_OFFSET)
 		{
 			centre = glm::vec3(-12.0f, 15.0f, 0.0);
 		}
@@ -127,7 +127,7 @@ extern "C"
 			}
 
 			// Check if the eye position has changed
-			if (trackerMode == TRACKER || trackerMode == TRACKEROFFSET)
+			if (trackerMode == TRACKER || trackerMode == TRACKER_OFFSET)
 			{
 				std::optional<glm::vec3> leftEyePos = trackerPtr->getLeftEyePos();
 				if (leftEyePos.has_value())
@@ -140,9 +140,9 @@ extern "C"
 					currentEyePos = currentEyePos;
 				}
 			}
-			else if (trackerMode == STATIC)
+			else if (trackerMode == STATIC || trackerMode == STATIC_OFFSET)
 			{
-				currentEyePos = glm::vec3(0.0f, -45.0f, 40.0f);
+				currentEyePos = glm::vec3(-extra_x_offset, -45.0f, 40.0f);
 			}
 
 			if (currentTime - lastTime >= 1.0)
@@ -229,40 +229,40 @@ void saveDebugInfo(Tracker &trackerPtr, Image &colourCamera, Image &colourCamera
 {
 	std::string miscPath = "/home/robbieb/Projects/VolumetricSim/misc/";
 
-	std::cout << "Saving data to " << miscPath << std::endl;
+	// std::cout << "Saving data to " << miscPath << std::endl;
 
 	PointCloud pointCloud = PointCloud();
 	pointCloud.updateCloud(trackerPtr.getPointCloud());
-	std::cout << "Saving Point Cloud" << std::endl;
+	// std::cout << "Saving Point Cloud" << std::endl;
 	pointCloud.save(miscPath + "pointCloud.csv");
-	std::cout << "Saving Colour Camera" << std::endl;
+	// std::cout << "Saving Colour Camera" << std::endl;
 	colourCamera.save(miscPath + "colourImage.png");
 	colourCameraSkeleton.save(miscPath + "colourImageSkeleton.png");
 	colourCameraSkeletonFace.save(miscPath + "colourImageSkeletonFace.png");
 	colourCameraSkeletonHand.save(miscPath + "colourImageSkeletonHand.png");
 	colourCameraImportant.save(miscPath + "colourImageImportant.png");
-	std::cout << "Saving Depth Camera" << std::endl;
+	// std::cout << "Saving Depth Camera" << std::endl;
 	depthCamera.save(miscPath + "depthImage.png");
 	depthCameraImportant.save(miscPath + "depthImageImportant.png");
 
-	std::cout << "Saving Eye Pos Left" << std::endl;
+	// std::cout << "Saving Eye Pos Left" << std::endl;
 	std::optional<glm::vec3> leftEyePos = trackerPtr.getLeftEyePos();
 	if (leftEyePos.has_value())
 	{
 		saveVec3ToCSV(leftEyePos.value(), miscPath + "leftEyePos.csv");
 	}
 
-	std::cout << "Saving Eye Pos Right" << std::endl;
+	// std::cout << "Saving Eye Pos Right" << std::endl;
 	std::optional<glm::vec3> rightEyePos = trackerPtr.getRightEyePos();
 	if (rightEyePos.has_value())
 	{
 		saveVec3ToCSV(rightEyePos.value(), miscPath + "rightEyePos.csv");
 	}
 
-	std::cout << "Saving Hand" << std::endl;
+	// std::cout << "Saving Hand" << std::endl;
 	hand.save(miscPath + "hand.csv");
 
-	std::cout << "Data saved" << std::endl;
+	// std::cout << "Data saved" << std::endl;
 }
 
 // This should be refactored/removed/done properly
@@ -317,7 +317,7 @@ cv::Mat generateDebugPrintBox(int fps)
 
 GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
 {
-	std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
+	// std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
 	// Init GLFW
 	glfwInit();
 	// Set all the required options for GLFW
@@ -334,7 +334,7 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
         std::cerr << "No monitors found" << std::endl;
     }
 
-    std::cout << "Available monitors:" << std::endl;
+    // std::cout << "Available monitors:" << std::endl;
     for (int i = 0; i < count; ++i) {
         const char* name = glfwGetMonitorName(monitors[i]);
         std::cout << i << ": " << name << std::endl;
@@ -367,7 +367,7 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
 	}
 
 	// Successfully loaded OpenGL
-	std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << "." << GLAD_VERSION_MINOR(version) << std::endl;
+	// std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << "." << GLAD_VERSION_MINOR(version) << std::endl;
 
 	// Define the viewport dimensions
 	glViewport(0, 0, pixelWidth, pixelHeight);

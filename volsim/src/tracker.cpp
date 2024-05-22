@@ -623,10 +623,10 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 			// Push the 'hand' object to 'jsonLog' under key 'hand'.
 			jsonLog["hand"].push_back(hand);
 
-			std::cout << "Index Pos: " << glm::to_string(posIndexFingerScreenSpace) << std::endl;
-			std::cout << "Middle Pos: " << glm::to_string(posMiddleFingerScreenSpace) << std::endl;
-			std::cout << std::endl;
-			std::cout << std::endl;
+			// std::cout << "Index Pos: " << glm::to_string(posIndexFingerScreenSpace) << std::endl;
+			// std::cout << "Middle Pos: " << glm::to_string(posMiddleFingerScreenSpace) << std::endl;
+			// std::cout << std::endl;
+			// std::cout << std::endl;
 		}
 
 		if (glm::distance(landmarks[0], landmarks[1]) < 18.0f)

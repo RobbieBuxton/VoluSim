@@ -1,4 +1,4 @@
 up 8.0
-forward 2.0
-forward 2.0
-forward 2.0
+forward 3.0
+forward 3.0
+down 8.0
