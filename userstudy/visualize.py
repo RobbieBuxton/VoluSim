@@ -1,7 +1,8 @@
 import pyvista as pv
 import numpy as np
+import os
 
-def plot_trace(eye_points,index_finger_points,middle_finger_points):
+def plot_trace(eye_points, index_finger_points, middle_finger_points, challenge):
     # Create a PyVista plotter
     plotter = pv.Plotter()
     
@@ -13,11 +14,114 @@ def plot_trace(eye_points,index_finger_points,middle_finger_points):
     plotter.add_points(eye_point_cloud, color="red", point_size=5)
     plotter.add_points(index_finger_point_cloud, color="blue", point_size=5)
     plotter.add_points(middle_finger_point_cloud, color="green", point_size=5)
-    
+
     plot_screen(plotter)
+    plot_virtual_sim(plotter)
+    plot_task(plotter, challenge)
     
     # Display the plot
     plotter.show()
+    
+import numpy as np
+
+def plot_virtual_sim(plotter):
+    width = 10.0
+    height = 20.0
+    
+    centre = np.array([0, 15, 0])
+    
+    sim_points = np.array([
+        centre + np.array([-width/2,  height/2, 0]),
+        centre + np.array([width/2,  height/2, 0]),
+        centre + np.array([-width/2, -height/2, 0]),
+        centre + np.array([width/2, -height/2, 0]),
+        centre + np.array([-width/2,  height/2, width]),
+        centre + np.array([width/2,  height/2, width]),
+        centre + np.array([-width/2, -height/2, width]),
+        centre + np.array([width/2, -height/2, width])
+    ])
+    
+    # Define the rectangle edges
+    sim_edges = np.array([
+        [sim_points[0], sim_points[1]],
+        [sim_points[1], sim_points[3]],
+        [sim_points[3], sim_points[2]],
+        [sim_points[2], sim_points[0]],
+        [sim_points[0], sim_points[4]],
+        [sim_points[1], sim_points[5]],
+        [sim_points[2], sim_points[6]],
+        [sim_points[3], sim_points[7]],
+        [sim_points[4], sim_points[5]],
+        [sim_points[5], sim_points[7]],
+        [sim_points[7], sim_points[6]],
+        [sim_points[6], sim_points[4]]
+    ])
+    
+    # Add the rectangle edges to the plotter
+    for edge in sim_edges:
+        plotter.add_lines(edge, color='black', width=5)
+
+# Usage example (assuming plotter is defined elsewhere)
+# plot_virtual_sim(plotter)
+
+    
+def plot_task(plotter, challenge):
+    # Convert task positions to numpy array for easy manipulation
+    task_positions = np.array(get_task_positions(challenge))
+
+    # Add task positions to the plotter
+    plotter.add_points(task_positions, color="purple", point_size=8)
+
+    # Draw lines between consecutive task positions
+    for i in range(len(task_positions) - 1):
+        line = pv.Line(task_positions[i], task_positions[i + 1])
+        plotter.add_mesh(line, color="purple", line_width=2)
+
+def get_task_positions(challenge):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    parent_dir = os.path.dirname(dir_path)
+    lib_path = os.path.join(parent_dir, "result/data/challenges/demo" + str(int(challenge)) + ".txt")
+    
+    direction_map = {
+        "up": np.array([0.0, 1.0, 0.0]),
+        "down": np.array([0.0, -1.0, 0.0]),
+        "forward": np.array([0.0, 0.0, 1.0]),
+        "back": np.array([0.0, 0.0, -1.0]),
+        "right": np.array([1.0, 0.0, 0.0]),
+        "left": np.array([-1.0, 0.0, 0.0])
+    }
+
+    directions = []
+    
+    try:
+        with open(lib_path, 'r') as file:
+            for line in file:
+                parts = line.strip().split()
+                if len(parts) == 2:
+                    keyword, length_str = parts
+                    try:
+                        length = float(length_str)
+                        if keyword in direction_map:
+                            directions.append(direction_map[keyword] * length)
+                        else:
+                            pass  # Unknown direction keyword, ignoring
+                    except ValueError:
+                        pass  # Invalid length format, ignoring
+                else:
+                    pass  # Invalid line format, ignoring
+    except IOError as e:
+        pass  # Handle file I/O error if necessary
+
+    start = np.array([-3.0, 7.0, 2.0])
+    
+    # Compute the cumulative points
+    cumulative_points = [start]
+    current_position = start
+    for direction in directions:
+        current_position = current_position + direction
+        cumulative_points.append(current_position)
+
+    return cumulative_points
 
 
 def visualize_point_cloud_pyvista(file_path, z_min=0, z_max=500, distance_threshold=1000):

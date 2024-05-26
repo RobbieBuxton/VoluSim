@@ -1,8 +1,4 @@
-
-
 import ctypes
-import os
-
 
 # Camera Offser
 camera_x, camera_y, camera_z, camera_rot = 3.25, 69.5, 30.0, 115.0

@@ -361,8 +361,8 @@ def trace(user_id,m,n):
     if not eye_points:
         print("No points found for the given parameters.")
         return
-
-    visualize.plot_trace(eye_points,index_finger_points,middle_finger_points)
+	    
+    visualize.plot_trace(eye_points, index_finger_points, middle_finger_points, challenge)
 
 if __name__ == "__main__":
     cli()
