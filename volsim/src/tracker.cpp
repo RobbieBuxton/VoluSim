@@ -259,9 +259,7 @@ void Tracker::update()
 		// Define time points and durations
 		std::chrono::high_resolution_clock::time_point startOverall, stopOverall;
 		std::chrono::high_resolution_clock::time_point start, stop;
-		std::chrono::milliseconds durationCapture, durationGPUOperations, durationTracking, durationOverall;
-
-		startOverall = std::chrono::high_resolution_clock::now();
+		std::chrono::milliseconds durationCapture, durationGPUOperations, durationTracking, durationDebug;
 
 		// Step 1: Capture Instance
 		start = std::chrono::high_resolution_clock::now();
@@ -279,7 +277,7 @@ void Tracker::update()
 		// GPU Processing
 		cv::cuda::cvtColor(bgraImageGpu, bgrImageGpu, cv::COLOR_BGRA2BGR);
 		cv::cuda::pyrDown(bgrImageGpu, bgrImageGpu);
-
+		
 		// Download from GPU
 		cv::Mat processedBgrImage;
 		bgrImageGpu.download(processedBgrImage);
@@ -287,44 +285,43 @@ void Tracker::update()
 		durationGPUOperations = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
 		// Step 5: Run the tracking
-		start = std::chrono::high_resolution_clock::now();
+
 		try
 		{
+			start = std::chrono::high_resolution_clock::now();
 			createNewTrackingFrame(processedBgrImage, latestCapture);
-
-			// Normalize and map depth image (example of further processing)
-			cv::Mat dImage(latestCapture->colorSpace.height, latestCapture->colorSpace.width, CV_16U, k4a_image_get_buffer(latestCapture->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(latestCapture->colorSpace.depthImage));
-			cv::Mat normalisedDImage, colorDepthImage;
-
-			cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
-			cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
-
-			colorDepthImage.copyTo(depthImage);
-			bgraImage.copyTo(colorImage);
+			stop = std::chrono::high_resolution_clock::now();
+			durationTracking = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+			startOverall = std::chrono::high_resolution_clock::now();
 
 			if (debug)
 			{
+				// Normalize and map depth image (example of further processing)
+				cv::Mat dImage(latestCapture->colorSpace.height, latestCapture->colorSpace.width, CV_16U, k4a_image_get_buffer(latestCapture->colorSpace.depthImage), (size_t)k4a_image_get_stride_bytes(latestCapture->colorSpace.depthImage));
+				cv::Mat normalisedDImage, colorDepthImage;
+
+				cv::normalize(dImage, normalisedDImage, 0, 255, cv::NORM_MINMAX, CV_8U);
+				cv::applyColorMap(normalisedDImage, colorDepthImage, cv::COLORMAP_JET);
+
+				colorDepthImage.copyTo(depthImage);
+				bgraImage.copyTo(colorImage);
 				debugDraw();
 			}
+			stopOverall = std::chrono::high_resolution_clock::now();
+			durationDebug = std::chrono::duration_cast<std::chrono::milliseconds>(stopOverall - startOverall);
 		}
 		catch (const std::exception &e)
 		{
 			std::cerr << "Failed to create new tracking frame" << std::endl;
 		}
 
-		stop = std::chrono::high_resolution_clock::now();
-		durationTracking = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-		stopOverall = std::chrono::high_resolution_clock::now();
-		durationOverall = std::chrono::duration_cast<std::chrono::milliseconds>(stopOverall - startOverall);
-
 		trackF->lastCapture = latestCapture;
 
-		// Print all durations at the end
+		// // Print all durations at the end
 		// std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
 		//           << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
 		//           << "Tracking:          " << durationTracking.count() << " ms\n"
-		//           << "Total Time:        " << durationOverall.count() << " ms" << std::endl
+		//           << "Debug:             " << durationDebug.count() << " ms" << std::endl
 		//           << std::endl;
 	}
 	catch (const std::exception &e)
@@ -575,10 +572,6 @@ glm::vec3 Tracker::getFilteredPoint(glm::vec3 point, std::shared_ptr<Capture> ca
 
 std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 {
-	auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-										 std::chrono::system_clock::now().time_since_epoch())
-										 .count();
-
 	if (trackF && trackF->hand)
 	{
 		std::vector<glm::vec3> landmarks;
@@ -610,13 +603,16 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 			glm::vec3 posMiddleFinger = getFilteredPoint(landmarkMiddleFinger, trackF->hand->capture);
 			posIndexFinger.y -= intoFingerOffset;
 			posIndexFinger.z -= intoFingerOffset;
-			
+
 			glm::vec3 posMiddleFingerScreenSpace = toScreenSpace(posMiddleFinger);
 			trackF->hand->cachedMiddleFinger = posMiddleFingerScreenSpace;
 
 			landmarks.push_back(posMiddleFingerScreenSpace);
 			// Add 'index' finger details to 'hand'.
 			nlohmann::json hand;
+			auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+										std::chrono::system_clock::now().time_since_epoch())
+										.count();
 			hand["time"] = currentTimeInMilliseconds;
 			hand["index"] = {
 				{"x", posIndexFingerScreenSpace.x},
@@ -650,10 +646,6 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 std::optional<glm::vec3> Tracker::getLeftEyePos()
 
 {
-	auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-										 std::chrono::system_clock::now().time_since_epoch())
-										 .count();
-
 	if (trackF && trackF->face)
 	{
 		if (trackF->face->cachedLeftEye.has_value())
@@ -667,6 +659,9 @@ std::optional<glm::vec3> Tracker::getLeftEyePos()
 			trackF->face->landmarks[0].y + trackF->face->landmarks[1].y);
 
 		glm::vec3 translatedEye = toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR, trackF->face->capture));
+		auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+										std::chrono::system_clock::now().time_since_epoch())
+										.count();
 		jsonLog["leftEye"].push_back({{"time", currentTimeInMilliseconds},
 									  {"x", translatedEye.x},
 									  {"y", translatedEye.y},
@@ -679,9 +674,6 @@ std::optional<glm::vec3> Tracker::getLeftEyePos()
 
 std::optional<glm::vec3> Tracker::getRightEyePos()
 {
-	auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-										 std::chrono::system_clock::now().time_since_epoch())
-										 .count();
 	if (trackF && trackF->face)
 	{
 		if (trackF->face->cachedRightEye.has_value())
@@ -694,6 +686,9 @@ std::optional<glm::vec3> Tracker::getRightEyePos()
 			trackF->face->landmarks[2].y + trackF->face->landmarks[3].y);
 
 		glm::vec3 translatedEye = toScreenSpace(calculate3DPos(eye.x, eye.y, K4A_CALIBRATION_TYPE_COLOR, trackF->face->capture));
+		auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+										std::chrono::system_clock::now().time_since_epoch())
+										.count();
 		jsonLog["rightEye"].push_back({{"time", currentTimeInMilliseconds},
 									   {"x", translatedEye.x},
 									   {"y", translatedEye.y},

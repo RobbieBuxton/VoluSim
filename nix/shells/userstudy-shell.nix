@@ -9,6 +9,8 @@ pkgs.mkShell {
     python311Packages.tabulate
     python311Packages.pyvista
     python311Packages.kivy
+    python311Packages.pandas
+    python311Packages.scipy
   ];
 
   shellHook =

@@ -5,12 +5,14 @@ import tabulate
 import random
 from statistics import mean, stdev
 import time
+import datetime
 
 #User created
 import utility
 import study
 import mongodb
 import visualize
+import graph
 
 @click.group()
 def cli():
@@ -30,6 +32,20 @@ def run():
 def debug():
     study.run_simulation("t", 1)
     visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    
+@run.command()
+def eval():    
+    db = mongodb.connect_to_mongo()
+    results_collection = db["evaluation"]
+    
+    output = study.run_simulation("t", 1)
+    
+    data = json.loads(output)
+    print(data["finished"])
+    
+    data['date'] = datetime.datetime.now()
+    result = results_collection.insert_one(data)
+    print("Inserted record id:", result.inserted_id)
     
 @run.command()
 @click.option(
@@ -99,6 +115,7 @@ def task(m, n, user_id, test):
         data['user_id'] = user  # Add the user ID to the data dictionary
         data['mode'] = study.mode_map[mode]  # Store the mode as well
         data["challenge_num"] = num  # Store the challenge number as well
+        data['date'] = datetime.datetime.now()
 
         result = results_collection.insert_one(data)
         print("Inserted record id:", result.inserted_id)
@@ -146,6 +163,7 @@ def next(user_id):
                 data['user_id'] = user_id
                 data['mode'] = mode
                 data['challenge_num'] = challenge_num
+                data['date'] = datetime.datetime.now()
                 
                 result = results_collection.insert_one(data)
                 print("Inserted record id:", result.inserted_id)
@@ -344,6 +362,7 @@ def trace(user_id,m,n):
     results = results_collection.find({"user_id": user["_id"], "mode": study.mode_map[mode], "challenge_num": challenge})
     
     # Prepare data for PyVista
+
     eye_points = []
     index_finger_points = []
     middle_finger_points = []
@@ -364,5 +383,33 @@ def trace(user_id,m,n):
 	    
     visualize.plot_trace(eye_points, index_finger_points, middle_finger_points, challenge)
 
+@show.command()
+def eval():
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    eval_collection = db["evaluation"]
+    
+    results = eval_collection.find().sort("_id", -1).limit(1)
+    
+    eye_points = []
+    hand_times = []
+    index_finger_points = []
+    middle_finger_points = []
+    for result in results:
+        tracker_logs = result.get("trackerLogs", {})
+        left_eye_logs = tracker_logs.get("leftEye", [])
+        for log in left_eye_logs:
+            eye_points.append([log["time"],log["x"], log["y"], log["z"]])
+            
+        hand_logs = tracker_logs.get("hand", [])
+        for log in hand_logs:
+            hand_times.append(log["time"])
+            index_finger_points.append([log["index"]["x"], log["index"]["y"], log["index"]["z"]])
+            middle_finger_points.append([log["middle"]["x"], log["middle"]["y"], log["middle"]["z"]])
+    
+    graph.graph_latency(eye_points)
 if __name__ == "__main__":
     cli()

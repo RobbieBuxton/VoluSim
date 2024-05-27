@@ -46,7 +46,7 @@ extern "C"
 
 		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
 
-		bool debug = true;
+		bool debug = false;
 
 		// Robbie's Screen
 		Display display(glm::vec3(0.0f, 0.f, 0.f), dWidth, dHeight, dDepth, 1.0f, 1000.0f);
@@ -385,7 +385,7 @@ void pollCapture(Tracker *trackerPtr, GLFWwindow *window)
 	{
 		trackerPtr->getLatestCapture();
 		// Wait for 20ms as camera is 30fps
-		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		// std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
 }
 
