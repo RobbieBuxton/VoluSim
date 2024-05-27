@@ -341,7 +341,7 @@ def result(user_id):
     required=True,
     help="Challenge number"
 )
-def trace(user_id,m,n):
+def task(user_id,m,n):
     mode = m 
     challenge = n
     db = mongodb.connect_to_mongo()
@@ -361,8 +361,11 @@ def trace(user_id,m,n):
     # Fetch the results
     results = results_collection.find({"user_id": user["_id"], "mode": study.mode_map[mode], "challenge_num": challenge})
     
+    x_offset = 0.0
+    if mode == "to" or mode == "so":
+        x_offset = 60.0
+        
     # Prepare data for PyVista
-
     eye_points = []
     index_finger_points = []
     middle_finger_points = []
@@ -370,12 +373,12 @@ def trace(user_id,m,n):
         tracker_logs = result.get("trackerLogs", {})
         left_eye_logs = tracker_logs.get("leftEye", [])
         for log in left_eye_logs:
-            eye_points.append([log["x"], log["y"], log["z"]])
+            eye_points.append([log["x"] + x_offset, log["y"], log["z"]])
             
         hand_logs = tracker_logs.get("hand", [])
         for log in hand_logs:
-            index_finger_points.append([log["index"]["x"], log["index"]["y"], log["index"]["z"]])
-            middle_finger_points.append([log["middle"]["x"], log["middle"]["y"], log["middle"]["z"]])
+            index_finger_points.append([log["index"]["x"] + x_offset, log["index"]["y"], log["index"]["z"]])
+            middle_finger_points.append([log["middle"]["x"]+ x_offset, log["middle"]["y"], log["middle"]["z"]])
     
     if not eye_points:
         print("No points found for the given parameters.")

@@ -53,9 +53,11 @@ extern "C"
 		std::shared_ptr<Renderer> renderer = std::make_shared<Renderer>(display);
 
 		float extra_x_offset = 0;
+		float hand_x_offset = 0;
 		if (trackerMode == TRACKER_OFFSET || trackerMode == STATIC_OFFSET)
 		{
 			extra_x_offset = 60.0f;
+			hand_x_offset = 48.0f;
 		}
 
 		std::unique_ptr<Tracker> trackerPtr = std::make_unique<Tracker>(glm::vec3(camera_x - extra_x_offset, camera_y, camera_z), camera_rot, debug);
@@ -81,7 +83,7 @@ extern "C"
 		glm::vec3 currentEyePos;
 
 		// Offset into fingers as only hits surface
-		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, 0.0f, 0.0f));
+		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(hand_x_offset, 0.0f, 0.0f));
 	
 		nlohmann::json jsonOutput;
 		// Get current time in milliseconds
