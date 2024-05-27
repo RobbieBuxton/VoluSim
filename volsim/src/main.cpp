@@ -81,7 +81,7 @@ extern "C"
 		glm::vec3 currentEyePos;
 
 		// Offset into fingers as only hits surface
-		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, -1.0f, -1.0f));
+		std::shared_ptr<Hand> hand = std::make_shared<Hand>(renderer, glm::vec3(extra_x_offset, 0.0f, 0.0f));
 	
 		nlohmann::json jsonOutput;
 		// Get current time in milliseconds

@@ -591,9 +591,15 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 		}
 		else
 		{
+			// The distance from the surface of the finger to the middle of the finger
+			float intoFingerOffset = 1.0f;
+
 			glm::vec3 landmarkIndexFinger = trackF->hand->landmarks[mp_hand_landmark_index_finger_tip];
 			// Correct for down sample
 			glm::vec3 posIndexFinger = getFilteredPoint(landmarkIndexFinger, trackF->hand->capture);
+			posIndexFinger.y -= intoFingerOffset;
+			posIndexFinger.z -= intoFingerOffset;
+
 			glm::vec3 posIndexFingerScreenSpace = toScreenSpace(posIndexFinger);
 			trackF->hand->cachedIndexFinger = posIndexFingerScreenSpace;
 			
@@ -602,6 +608,9 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 			glm::vec3 landmarkMiddleFinger = trackF->hand->landmarks[mp_hand_landmark_middle_finger_tip];
 			// Correct for down sample
 			glm::vec3 posMiddleFinger = getFilteredPoint(landmarkMiddleFinger, trackF->hand->capture);
+			posIndexFinger.y -= intoFingerOffset;
+			posIndexFinger.z -= intoFingerOffset;
+			
 			glm::vec3 posMiddleFingerScreenSpace = toScreenSpace(posMiddleFinger);
 			trackF->hand->cachedMiddleFinger = posMiddleFingerScreenSpace;
 

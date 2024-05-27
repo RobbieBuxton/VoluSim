@@ -1,7 +1,8 @@
 import ctypes
+import os
 
 # Camera Offser
-camera_x, camera_y, camera_z, camera_rot = 3.25, 69.5, 30.0, 115.0
+camera_x, camera_y, camera_z, camera_rot = 3.75, 66.0, 30.0, 115.0
 
 # Define the Mode enumeration in Python using a dictionary for simplicity
 mode_map = {"t": "TRACKER", "s": "STATIC", "to": "TRACKER_OFFSET", "so": "STATIC_OFFSET"}

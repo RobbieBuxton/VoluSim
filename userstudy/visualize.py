@@ -80,7 +80,7 @@ def plot_task(plotter, challenge):
 def get_task_positions(challenge):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     parent_dir = os.path.dirname(dir_path)
-    lib_path = os.path.join(parent_dir, "result/data/challenges/demo" + str(int(challenge)) + ".txt")
+    lib_path = os.path.join(parent_dir, "result/data/challenges/task" + str(int(challenge)) + ".txt")
     
     direction_map = {
         "up": np.array([0.0, 1.0, 0.0]),

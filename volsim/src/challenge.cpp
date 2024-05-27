@@ -151,12 +151,14 @@ void Challenge::draw()
 					renderer->drawLine(segment.start, grabPos, segment.radius, 2);
 				}
 				renderer->drawPoint(segment.end, segment.radius * 3, 4);
+				renderer->drawLine(segment.start, segment.end, segment.radius / 2.0f, 4);
 			}
 			else
 			{
 				renderer->drawPoint(segment.end, segment.radius * 3, 0);
+				renderer->drawLine(segment.start, segment.end, segment.radius / 2.0f, 0);
 			}
-			renderer->drawLine(segment.start, segment.end, segment.radius / 2.0f, 0);
+			
 		}
 		lastSegment = segment;
 	}

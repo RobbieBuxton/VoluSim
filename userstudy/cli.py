@@ -243,11 +243,11 @@ def results():
 ### View ###
 ############
 @cli.group()
-def view():
+def show():
     """List various resources."""
     pass
 
-@view.command()
+@show.command()
 @click.argument("user_id")
 def result(user_id):
     """Displays a table with the average time between completions and the standard deviation for the requested user."""
@@ -309,7 +309,7 @@ def result(user_id):
     print(tabulate.tabulate(user_info, tablefmt="grid"))
     print(tabulate.tabulate([avg_row, std_row], headers=headers, tablefmt="grid"))
   
-@view.command()
+@show.command()
 @click.argument("user_id")
 @click.option(
     "-m",
