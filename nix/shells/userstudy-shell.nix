@@ -2,6 +2,8 @@
 pkgs.mkShell {
   name = "userstudy-shell";
 
+
+
   packages = with pkgs; [   
     python311Packages.pymongo
     python311Packages.click
@@ -11,6 +13,11 @@ pkgs.mkShell {
     python311Packages.kivy
     python311Packages.pandas
     python311Packages.scipy
+    (texlive.combine {
+            inherit (texlive)
+              scheme-full
+              ;
+          })
   ];
 
   shellHook =

@@ -44,6 +44,7 @@ def eval():
     print(data["finished"])
     
     data['date'] = datetime.datetime.now()
+    data['pydown'] = 3
     result = results_collection.insert_one(data)
     print("Inserted record id:", result.inserted_id)
     
@@ -386,33 +387,58 @@ def task(user_id,m,n):
 	    
     visualize.plot_trace(eye_points, index_finger_points, middle_finger_points, challenge)
 
-@show.command()
+
+@show.group()
 def eval():
+    """Generate graphs"""
+    pass
+
+@eval.command()
+def latency():
     db = mongodb.connect_to_mongo()
     if db is None:
         print("Failed to connect to MongoDB.")
         return
     
-    eval_collection = db["evaluation"]
+    eval_collection = db["evaluation_snapshot_1_overall_latency"]
     
-    results = eval_collection.find().sort("_id", -1).limit(1)
-    
-    eye_points = []
-    hand_times = []
-    index_finger_points = []
-    middle_finger_points = []
+    results = eval_collection.find().sort("_id", -1).limit(5)
+
+    challenge_times = []
     for result in results:
+        times = []
         tracker_logs = result.get("trackerLogs", {})
         left_eye_logs = tracker_logs.get("leftEye", [])
         for log in left_eye_logs:
-            eye_points.append([log["time"],log["x"], log["y"], log["z"]])
-            
-        hand_logs = tracker_logs.get("hand", [])
-        for log in hand_logs:
-            hand_times.append(log["time"])
-            index_finger_points.append([log["index"]["x"], log["index"]["y"], log["index"]["z"]])
-            middle_finger_points.append([log["middle"]["x"], log["middle"]["y"], log["middle"]["z"]])
+            times.append(log["time"])
+        
+        challenge_times.append(times)   
+        
+    graph.graph_latency_overall(challenge_times)
     
-    graph.graph_latency(eye_points)
+    
+@eval.command()
+def pydown():
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    eval_collection = db["evaluation_snapshot_2_pydown"]
+    
+    results = eval_collection.find().sort("_id", -1).limit(5)
+    
+    challenge_times = {}
+    for result in results:
+        times = []
+        tracker_logs = result.get("trackerLogs", {})
+        left_eye_logs = tracker_logs.get("leftEye", [])
+        for log in left_eye_logs:
+            times.append(log["time"])
+        
+        challenge_times[int(result.get("pydown", {}))] = times 
+    
+    graph.graph_latency_pydown(challenge_times)
+
 if __name__ == "__main__":
     cli()
