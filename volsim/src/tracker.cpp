@@ -233,11 +233,22 @@ std::vector<glm::vec3> Tracker::getPointCloud()
 
 void Tracker::getLatestCapture()
 {
+	nlohmann::json capture;
+	auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+								std::chrono::system_clock::now().time_since_epoch())
+								.count();
+
+	auto start = std::chrono::high_resolution_clock::now();
 	while (true)
 	{
 		try
 		{
 			latestCapture = std::make_shared<Capture>(device, transformation);
+			auto end = std::chrono::high_resolution_clock::now();
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+			capture["time"] = currentTimeInMilliseconds;
+			capture["captureTime"] = duration.count();
+			jsonLog["capture"].push_back(capture);
 			return;
 		}
 		catch (const std::exception &e)
@@ -317,12 +328,16 @@ void Tracker::update()
 
 		trackF->lastCapture = latestCapture;
 
-		// // Print all durations at the end
-		// std::cout << "Capture Instance:  " << durationCapture.count() << " ms\n"
-		//           << "GPU Operations:    " << durationGPUOperations.count() << " ms\n"
-		//           << "Tracking:          " << durationTracking.count() << " ms\n"
-		//           << "Debug:             " << durationDebug.count() << " ms" << std::endl
-		//           << std::endl;
+
+		nlohmann::json tracking;
+		auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+									std::chrono::system_clock::now().time_since_epoch())
+									.count();
+		tracking["time"] = currentTimeInMilliseconds;
+		tracking["GPUTime"] = durationGPUOperations.count();
+		tracking["trackTime"] = durationTracking.count();
+		jsonLog["tracking"].push_back(tracking);
+
 	}
 	catch (const std::exception &e)
 	{
@@ -628,10 +643,6 @@ std::optional<std::vector<glm::vec3>> Tracker::getHandLandmarks()
 			// Push the 'hand' object to 'jsonLog' under key 'hand'.
 			jsonLog["hand"].push_back(hand);
 
-			// std::cout << "Index Pos: " << glm::to_string(posIndexFingerScreenSpace) << std::endl;
-			// std::cout << "Middle Pos: " << glm::to_string(posMiddleFingerScreenSpace) << std::endl;
-			// std::cout << std::endl;
-			// std::cout << std::endl;
 		}
 
 		if (glm::distance(landmarks[0], landmarks[1]) < 18.0f)

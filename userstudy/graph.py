@@ -2,19 +2,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from collections import Counter
 
-def graph_latency_overall(challenge_times):
+def graph_framerate_overall(challenge_times):
     
     plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Computer Modern Roman"],
-    "axes.labelsize": 20,
-    "font.size": 25,
-    "legend.fontsize": 10,
-    "xtick.labelsize": 15,
-    "ytick.labelsize": 15,
-    "figure.figsize": (13, 6)
-	})
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (13, 6)
+    })
     
     # Calculate time differences (latencies)
     latencies = []
@@ -58,20 +58,20 @@ def graph_latency_overall(challenge_times):
     # Plotting the histogram
     plt.figure(figsize=(13, 6))
     plt.hist(df_filtered_latencies['Latency'], bins=68, edgecolor='black', color='#0073c0ff')
-    plt.title('Tracker Latency Distribution (5 mins)')
-    plt.xlabel('Latency (ms)')
+    plt.title('Tracker Framerate Distribution (5 mins)')
+    plt.xlabel('Time (ms)')
     plt.ylabel('Frequency ')
-
+    plt.grid(True)
     # Set x-axis ticks for every integer value
     plt.xticks(range(int(df_filtered_latencies['Latency'].min()), int(df_filtered_latencies['Latency'].max()) + 1))
 
     # Save to PNG with transparent background and tight bounding box
-    plt.savefig('misc/overall-latency.pdf', transparent=True, bbox_inches='tight')
+    plt.savefig('misc/graphs/framerate-overall.pdf', transparent=True, bbox_inches='tight')
 
     # Show the plot
     plt.show()
     
-def graph_latency_pydown(challenge_times_dict):
+def graph_framerate_pydown(challenge_times_dict):
     
     # Map these keys for the legend
     key_mapping = {
@@ -161,14 +161,104 @@ def graph_latency_pydown(challenge_times_dict):
     # Handle the legend
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys(), title="Resolution")
+    plt.legend(reversed(by_label.values()), reversed(by_label.keys()), title="Resolution")
 
-    plt.title('Tracker Latency Distribution (1 min)')
-    plt.xlabel('Latency (ms)')
+    plt.title('Tracker Framerate Distribution (1 min)')
+    plt.xlabel('Time (ms)')
     plt.ylabel('Frequency')
+    plt.grid(True)
     
     # Save to PNG with transparent background and tight bounding box
-    plt.savefig('misc/pydown.pdf', transparent=True, bbox_inches='tight')
+    plt.savefig('misc/graphs/pydown.pdf', transparent=True, bbox_inches='tight')
 
     # Show the plot
     plt.show()
+    
+def graph_process_times(capture_times, tracking_times, render_times):
+	plt.rcParams.update({
+		"text.usetex": True,
+		"font.family": "serif",
+		"font.serif": ["Computer Modern Roman"],
+		"axes.labelsize": 20,
+		"font.size": 15,
+		"legend.fontsize": 15,
+		"xtick.labelsize": 15,
+		"ytick.labelsize": 15,
+		"figure.figsize": (13, 8)
+	})
+
+	def calculate_process_times(times, key):
+		return [entry[key] for entry in times if entry[key] <= 50]
+
+	# Calculate latencies for each component and filter out values over 100 ms
+	capture_latencies = calculate_process_times(capture_times, 'captureTime')
+	track_latencies = calculate_process_times(tracking_times, 'trackTime')
+	render_latencies = calculate_process_times(render_times, 'renderTime')
+	
+	all_latencies = capture_latencies + track_latencies + render_latencies
+
+	# Determine the global min and max latency
+	if all_latencies:
+		min_latency = int(min(all_latencies))
+		max_latency = int(max(all_latencies))
+	else:
+		min_latency, max_latency = 0, 80
+	
+	# Define the bins based on the global min and max latency
+	bins = range(min_latency, max_latency + 2)  # +2 to include the max_latency in the range
+
+	# Create dataframes for each component
+	df_capture = pd.DataFrame(capture_latencies, columns=['Latency'])
+	df_track = pd.DataFrame(track_latencies, columns=['Latency'])
+	df_render = pd.DataFrame(render_latencies, columns=['Latency'])
+
+	# Prepare data for all groups
+	all_group_data = []
+	for df, label, color in zip(
+		[df_capture, df_track, df_render], 
+		['Capture Time', 'Track Time', 'Render Time'],
+		['#8f45a3ff', '#0073c0ff', '#2aaa00ff']
+	):
+		# Count the frequency of each latency
+		latency_counter = Counter(df['Latency'])
+		latency_freq = latency_counter.most_common()
+
+		for latency, freq in latency_freq:
+			print(f'{label} - {latency} ms: {freq} times')
+
+		# Filter latencies where the frequency is less than 5
+		filtered_latencies = [latency for latency, freq in latency_freq if freq >= 5]
+
+		# Create a filtered DataFrame
+		df_filtered_latencies = df[df['Latency'].isin(filtered_latencies)]
+		
+		# Collect data for each group
+		group_data = pd.Series(dict(Counter(df_filtered_latencies['Latency'])))
+		all_group_data.append((label, group_data, color))
+
+	plt.figure(figsize=(13, 8))
+	
+	# Plot the histogram bin by bin
+	for bin in bins:
+		bin_heights = []
+		for label, group_data, color in all_group_data:
+			if bin in group_data:
+				bin_heights.append((group_data[bin], color, label))
+		
+		# Sort bin heights in descending order and plot
+		bin_heights.sort(reverse=True, key=lambda x: x[0])
+		for height, color, label in bin_heights:
+			plt.bar(bin, height, edgecolor='black', color=color, label=label)
+
+	# Handle the legend
+	handles, labels = plt.gca().get_legend_handles_labels()
+	by_label = dict(zip(labels, handles))
+	plt.legend(by_label.values(), by_label.keys(), title="Latency Type")
+
+	plt.title('Process Times Distributions (3 mins)')
+	plt.xlabel('Time (ms)')
+	plt.ylabel('Frequency')
+	plt.grid(True)
+
+	plt.savefig('misc/graphs/process-times-distributions.pdf', transparent=True, bbox_inches='tight')
+	plt.show()

@@ -34,7 +34,7 @@ extern "C"
 {
 	static std::string outputString;
 
-	const char *runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot)
+	const char *runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot, bool debug)
 	{
 		// debugInitPrint();
 
@@ -45,8 +45,6 @@ extern "C"
 		GLfloat dDepth = 0.01f;
 
 		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
-
-		bool debug = false;
 
 		// Robbie's Screen
 		Display display(glm::vec3(0.0f, 0.f, 0.f), dWidth, dHeight, dDepth, 1.0f, 1000.0f);
@@ -122,6 +120,9 @@ extern "C"
 											std::chrono::system_clock::now().time_since_epoch())
 											.count();
 
+			// Start timing the render loop
+			auto renderStartTime = std::chrono::high_resolution_clock::now();
+			
 			if ((currentTimeInMilliseconds - startTimeInMilliseconds) > 60000)
 			{
 				std::cout << "Timeout: " << (currentTimeInMilliseconds - startTimeInMilliseconds) << "ms" << std::endl;
@@ -175,7 +176,6 @@ extern "C"
 			hand->updateLandmarks(trackerPtr->getHandLandmarks());
 			challenge.update();
 
-
 			processInput(window);
 			renderer->clear();
 			hand->draw();
@@ -196,6 +196,16 @@ extern "C"
 
 			glfwSwapBuffers(window);
 			glfwPollEvents();
+
+			// Calculate the time spent in the render loop
+			nlohmann::json render;
+			auto renderEndTime = std::chrono::high_resolution_clock::now();
+			auto renderDuration = std::chrono::duration_cast<std::chrono::milliseconds>(renderEndTime - renderStartTime).count();
+			render["renderTime"] = renderDuration;
+			render["time"] = currentTimeInMilliseconds;
+
+			// Save the render loop time in the JSON object
+			jsonOutput["renderLogs"].push_back(render);
 		}
 		trackerThread.join();
 		captureThread.join();

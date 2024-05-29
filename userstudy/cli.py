@@ -30,7 +30,7 @@ def run():
 
 @run.command()
 def debug():
-    study.run_simulation("t", 1)
+    study.run_simulation("t", 1, "True")
     visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
@@ -44,7 +44,7 @@ def eval():
     print(data["finished"])
     
     data['date'] = datetime.datetime.now()
-    data['pydown'] = 3
+    data['pydown'] = 1
     result = results_collection.insert_one(data)
     print("Inserted record id:", result.inserted_id)
     
@@ -394,7 +394,7 @@ def eval():
     pass
 
 @eval.command()
-def latency():
+def framerate():
     db = mongodb.connect_to_mongo()
     if db is None:
         print("Failed to connect to MongoDB.")
@@ -414,7 +414,7 @@ def latency():
         
         challenge_times.append(times)   
         
-    graph.graph_latency_overall(challenge_times)
+    graph.graph_framerate_overall(challenge_times)
     
     
 @eval.command()
@@ -438,7 +438,36 @@ def pydown():
         
         challenge_times[int(result.get("pydown", {}))] = times 
     
-    graph.graph_latency_pydown(challenge_times)
+    graph.graph_framerate_pydown(challenge_times)
+
+@eval.command()
+def times():
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    eval_collection = db["evaluation"]
+    
+    results = eval_collection.find().sort("_id", -1).limit(5)
+    
+    capture_times = []
+    tracking_times = []
+    render_times = []
+    for result in results:
+        times = []
+        render_logs = result.get("renderLogs", {})
+        for log in render_logs:
+            render_times.append(log)
+        tracker_logs = result.get("trackerLogs", {})
+        capture_logs = tracker_logs.get("capture", [])
+        for log in capture_logs:
+            capture_times.append(log)
+        tracking_logs = tracker_logs.get("tracking", [])
+        for log in tracking_logs:
+            tracking_times.append(log)
+    
+    graph.graph_process_times(capture_times,tracking_times,render_times)
 
 if __name__ == "__main__":
     cli()
