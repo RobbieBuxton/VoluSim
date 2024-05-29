@@ -122,7 +122,7 @@ extern "C"
 
 			// Start timing the render loop
 			auto renderStartTime = std::chrono::high_resolution_clock::now();
-			
+
 			if ((currentTimeInMilliseconds - startTimeInMilliseconds) > 60000)
 			{
 				std::cout << "Timeout: " << (currentTimeInMilliseconds - startTimeInMilliseconds) << "ms" << std::endl;
@@ -180,6 +180,9 @@ extern "C"
 			renderer->clear();
 			hand->draw();
 			challenge.draw();
+
+			// For proving the display is 3D
+			// renderer->drawCuboid(centre + glm::vec3(0,0,6.0f), 13.5, 13.5, 12, 4);
 
 			if (debug)
 			{

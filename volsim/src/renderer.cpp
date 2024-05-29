@@ -56,7 +56,7 @@ void Renderer::setupShader() {
     modelShader->use();
     modelShader->setMat4("projection", projectionToEye);
     modelShader->setVec3("viewPos", currentEyePos);
-    modelShader->setVec3("lightPos", glm::vec3(0.0f, display->height, 80.0f));
+    modelShader->setVec3("lightPos", glm::vec3(0.0f, -45.0f, 40.0f));
     modelShader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 }
 
