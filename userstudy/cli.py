@@ -6,6 +6,7 @@ import random
 from statistics import mean, stdev
 import time
 import datetime
+import math
 
 #User created
 import utility
@@ -34,7 +35,9 @@ def debug():
     visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
-def eval():    
+@click.argument("user")
+@click.argument("distance")
+def eval(user, distance):    
     db = mongodb.connect_to_mongo()
     results_collection = db["evaluation"]
     
@@ -44,7 +47,9 @@ def eval():
     print(data["finished"])
     
     data['date'] = datetime.datetime.now()
+    data['user'] = user
     data['pydown'] = 1
+    data['distance'] = int(distance)
     result = results_collection.insert_one(data)
     print("Inserted record id:", result.inserted_id)
     
@@ -447,7 +452,7 @@ def times():
         print("Failed to connect to MongoDB.")
         return
     
-    eval_collection = db["evaluation"]
+    eval_collection = db["evaluation_snapshot_3_process_times"]
     
     results = eval_collection.find().sort("_id", -1).limit(5)
     
@@ -455,7 +460,6 @@ def times():
     tracking_times = []
     render_times = []
     for result in results:
-        times = []
         render_logs = result.get("renderLogs", {})
         for log in render_logs:
             render_times.append(log)
@@ -468,6 +472,66 @@ def times():
             tracking_times.append(log)
     
     graph.graph_process_times(capture_times,tracking_times,render_times)
+    
 
+@eval.command()
+def angles():
+    
+    def calculate_angle(a, b, c):
+        # Using the Law of Cosines to calculate the angle opposite to side c
+        angle = math.acos((a**2 + b**2 - c**2) / (2 * a * b))
+        return math.degrees(angle)
+    # Dictionary containing the lengths of the sides of the triangles for each user
+    triangle_lengths = {
+        "A": {"left": [50.0, 57.0, 101.5], "right": [50.0, 58.0, 98.5]}, #Elizibeta
+        "B": {"left": [50.0, 59.5, 100.0], "right": [50.0, 61.0, 101.5]}, #Stylianos
+        "C": {"left": [50.0, 55.5, 99.0], "right": [50.0, 52.0, 89.0]}, #Hoshin
+        "D": {"left": [50.0, 58.0, 104.0], "right": [50.0, 55.0, 96.0]} #Robby
+        # Add more users as needed
+    }
+
+    angles = {}
+    
+    for user, lengths in triangle_lengths.items():
+        angles[user] = {}
+        # Calculate the left angle
+        left_side_a, left_side_b, left_side_c = lengths["left"]
+        left_angle = calculate_angle(left_side_a, left_side_b, left_side_c)
+        angles[user]["left"] = left_angle
+
+        # Calculate the right angle
+        right_side_a, right_side_b, right_side_c = lengths["right"]
+        right_angle = calculate_angle(right_side_a, right_side_b, right_side_c)
+        angles[user]["right"] = right_angle
+    
+    graph.graph_angles(angles)
+    
+@eval.command()
+def tracking():
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    eval_collection = db["evaluation"]
+    results = eval_collection.find().sort("distance", -1).limit(100)
+    
+    distance_head = {}
+    distance_hand = {}
+    for result in results:
+        head = []
+        hands = []
+        tracker_logs = result.get("trackerLogs", {})
+        capture_logs = tracker_logs.get("headTrack", [])
+        for log in capture_logs:
+            head.append(log)
+        distance_head[result.get("distance", {})] = head
+        tracking_logs = tracker_logs.get("handTrack", [])
+        for log in tracking_logs:
+            hands.append(log)
+        distance_hand[result.get("distance", {})] = hands
+	
+    graph.graph_tracking(distance_head, distance_hand)
+ 
 if __name__ == "__main__":
     cli()

@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import Counter
+import numpy as np
 
 def graph_framerate_overall(challenge_times):
     
@@ -33,21 +34,6 @@ def graph_framerate_overall(challenge_times):
     for latency, freq in latency_freq:
         print(f'{latency} ms: {freq} times')
 
-
-    # # Calculate the total number of latencies
-    # total_latencies = len(df_latencies)    
-    # # Calculate the number of latencies between 30-35ms
-    # latencies_30_35 = df_latencies[(df_latencies['Latency'] >= 30) & (df_latencies['Latency'] <= 35)]
-    # percentage_30_35 = len(latencies_30_35) / total_latencies * 100    
-    # # Calculate the number of latencies between 16-18ms
-    # latencies_16_18 = df_latencies[(df_latencies['Latency'] >= 16) & (df_latencies['Latency'] <= 18)]
-    # percentage_16_18 = len(latencies_16_18) / total_latencies * 100    
-    # # Calculate the number of latencies between 49-51ms
-    # latencies_49_51 = df_latencies[(df_latencies['Latency'] >= 49) & (df_latencies['Latency'] <= 51)]
-    # percentage_49_51 = len(latencies_49_51) / total_latencies * 100    
-    # print(f"Percentage of latencies between 30-35ms: {percentage_30_35:.2f}%")
-    # print(f"Percentage of latencies between 16-18ms: {percentage_16_18:.2f}%")
-    # print(f"Percentage of latencies between 49-51ms: {percentage_49_51:.2f}%")
 
     # Filter latencies where the frequency is less than 5
     filtered_latencies = [latency for latency, freq in latency_freq if freq >= 5]
@@ -262,3 +248,108 @@ def graph_process_times(capture_times, tracking_times, render_times):
 
 	plt.savefig('misc/graphs/process-times-distributions.pdf', transparent=True, bbox_inches='tight')
 	plt.show()
+
+def graph_angles(angles):
+    
+    # angles = {"A" :{"left": [50.0, 57.0, 101.5], "right": [50.0, 58.0, 98.5]}, "B": ...}
+    print(angles)
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (10, 10)
+    })
+    
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw={'projection': 'polar'})
+    
+    colors = ['#8f45a3ff', '#ff7c37ff', '#0073c0ff', '#2aaa00ff']
+    
+    for i, (user, angle_dict) in enumerate(angles.items()):
+        color = colors[i % len(colors)]
+        left_angle = angle_dict['left']
+        right_angle = angle_dict['right']
+        
+        # Convert angles to radians with 0 degrees at the top
+        left_angle_rad = np.radians(90 - left_angle)
+        right_angle_rad = np.radians(90 - (360 - right_angle))  # Adjust for clockwise direction
+        
+        # Calculate points on the circumference
+        left_r = 1
+        right_r = 1
+        
+        # Plot points
+        ax.plot(left_angle_rad, left_r, 'o', color=color, markersize=15, alpha=0.5, label=user)
+        ax.plot(right_angle_rad, right_r, 'o', color=color, markersize=15, alpha=0.5)
+        
+    ax.set_ylim([0, 1.5])
+    ax.set_yticks([])
+    ax.set_xticks(np.radians(np.arange(0, 360, 30)))
+    ax.set_xticklabels([f"{(90 - i) % 360}°" for i in range(0, 360, 30)])
+    ax.grid(True)
+    
+    plt.title('Limit of head tracking angles (degrees)')
+    
+    # Handle the legend
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+
+    ax.legend(by_label.values(), by_label.keys(), loc='upper right', title="User")
+    
+    plt.savefig('misc/graphs/user-angles.pdf', transparent=True, bbox_inches='tight')
+    plt.show()
+    
+def graph_tracking(distance_head, distance_hand):
+    # distance_head = {2.0: [{'success': False, 'time': 1717085224584}, {'success': True, 'time': 1717085224610}]}
+    # distance_hand = {2.0: [{'success': False, 'time': 1717085224584}, {'success': True, 'time': 1717085224610}]}
+    
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (8, 4)
+    })
+    
+    def calculate_success_rate(data):
+        success_rates = {}
+        for distance, attempts in data.items():
+            total_attempts = len(attempts)
+            successful_attempts = sum(1 for attempt in attempts if attempt['success'])
+            success_rate = (successful_attempts / total_attempts) * 100 if total_attempts > 0 else 0
+            success_rates[distance] = success_rate
+        return success_rates
+
+    # Calculate success rates
+    head_success_rates = calculate_success_rate(distance_head)
+    hand_success_rates = calculate_success_rate(distance_hand)
+
+    # Prepare data for plotting
+    distances = sorted(set(head_success_rates.keys()).union(hand_success_rates.keys()))
+    head_rates = [head_success_rates.get(distance, 0) for distance in distances]
+    hand_rates = [hand_success_rates.get(distance, 0) for distance in distances]
+
+    # Plotting the success rates
+    plt.figure(figsize=(13, 8))
+    plt.plot(distances, head_rates, marker='o', linestyle='-', color='#0073c0ff', label='Head Tracking (Dlib)')
+    plt.plot(distances, hand_rates, marker='o', linestyle='-', color='#ff7c37ff', label='Hand Tracking (MediaPipe)')
+    
+    plt.title('Tracking Success Rate at Different Distances (30 secs)')
+    plt.xlabel('Distance (cm)')
+    plt.ylabel('Success Rate (\%)')
+    plt.legend(title='Tracking Type')
+    plt.grid(True)
+
+    # Save to PDF with transparent background and tight bounding box
+    plt.savefig('misc/graphs/tracking-success-rate.pdf', transparent=True, bbox_inches='tight')
+
+    # Show the plot
+    plt.show()

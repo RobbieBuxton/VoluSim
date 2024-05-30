@@ -370,6 +370,11 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
 	// Get first from batch (I think need to double check this)
 	std::vector<dlib::mmod_rect> dets = detections[0];
 
+	nlohmann::json headTrack;
+	auto currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+									std::chrono::system_clock::now().time_since_epoch())
+									.count();
+	headTrack["time"] = currentTimeInMilliseconds;
 	// If face detected
 	if (!dets.empty())
 	{
@@ -388,11 +393,20 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
 		}
 		face->capture = capture;
 		trackF->face = std::move(face);
+		headTrack["success"] = true;
+	} else {
+		headTrack["success"] = false;
 	}
+	jsonLog["headTrack"].push_back(headTrack);
 
 	// Wait until the image has been processed.
 	CHECK_MP_RESULT(mp_wait_until_idle(instance))
 
+	nlohmann::json handTrack;
+	currentTimeInMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+									std::chrono::system_clock::now().time_since_epoch())
+									.count();
+	handTrack["time"] = currentTimeInMilliseconds;
 	// Get hand landmarks
 	// Making the assumption if there is a landmark packet there is a rect packet
 	if (mp_get_queue_size(landmarks_poller) > 0)
@@ -427,6 +441,9 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
 
 			hand->capture = capture;
 			trackF->hand = std::move(hand);
+			handTrack["success"] = true;
+		} else {
+			handTrack["success"] = false;
 		}
 
 		mp_destroy_multi_face_landmarks(hand_landmarks_list);
@@ -436,8 +453,10 @@ void Tracker::createNewTrackingFrame(cv::Mat inputColorImage, std::shared_ptr<Ca
 	}
 	else
 	{
+		handTrack["success"] = false;
 		trackF->hand = nullptr;
 	}
+	jsonLog["handTrack"].push_back(handTrack);
 }
 
 void Tracker::debugDraw()
