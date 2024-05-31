@@ -44,7 +44,7 @@ extern "C"
 		GLfloat dWidth = 34.0f;
 		GLfloat dDepth = 0.01f;
 
-		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight);
+		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight, trackerMode);
 
 		// Robbie's Screen
 		Display display(glm::vec3(0.0f, 0.f, 0.f), dWidth, dHeight, dDepth, 1.0f, 1000.0f);
@@ -179,8 +179,8 @@ extern "C"
 
 			processInput(window);
 			renderer->clear();
-			// hand->draw();
-			// challenge.draw();
+			hand->draw();
+			challenge.draw();
 
 			// For proving the display is 3D
 			// renderer->drawCuboid(centre + glm::vec3(0,0,6.0f), 13.5, 13.5, 12, 4);
@@ -331,7 +331,7 @@ cv::Mat generateDebugPrintBox(int fps)
 	return img;
 }
 
-GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
+GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight, Mode trackerMode)
 {
 	// std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
 	// Init GLFW
@@ -356,7 +356,17 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight)
         std::cout << i << ": " << name << std::endl;
     }
 	
-	int selectedMonitorIndex = 1;
+	
+	int selectedMonitorIndex ;
+	if (trackerMode == TRACKER || trackerMode == STATIC)
+	{
+		selectedMonitorIndex = 4;
+	}
+	else
+	{
+		selectedMonitorIndex = 1;
+	}
+
 	GLFWmonitor* selectedMonitor = monitors[selectedMonitorIndex];
 
 	// Create a GLFWwindow object that we can use for GLFW's functions

@@ -105,7 +105,7 @@ void Challenge::update()
 			{
 				segment.completed = true;
 				segment.completedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-				std::cout << "Segment completed in " << (segment.completedTime - startTime).count() << "ms" << std::endl;
+				// std::cout << "Segment completed in " << (segment.completedTime - startTime).count() << "ms" << std::endl;
 			}
 			lastSegment = segment;
 		}

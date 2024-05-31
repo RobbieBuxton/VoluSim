@@ -69,8 +69,8 @@ void Model::loadObjFile(const std::string &objPath)
     tinyobj::attrib_t attributes = reader.GetAttrib();
     std::vector<tinyobj::shape_t> shapes = reader.GetShapes();
     std::vector<tinyobj::material_t> materials = reader.GetMaterials();
-    std::cout << "Shape Number: " << shapes.size() << std::endl;
-    std::cout << "Materials Number: " << materials.size() << std::endl;
+    // std::cout << "Shape Number: " << shapes.size() << std::endl;
+    // std::cout << "Materials Number: " << materials.size() << std::endl;
 
     for (const auto &mat : materials)
     {

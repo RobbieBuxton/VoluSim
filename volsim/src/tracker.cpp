@@ -77,7 +77,7 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot, bool debug)
 		throw NoTrackersDetectedException();
 	}
 
-	std::cout << "k4a device attached!" << std::endl;
+	// std::cout << "k4a device attached!" << std::endl;
 
 	// Open the first plugged in Tracker device
 	device = NULL;
@@ -93,7 +93,7 @@ Tracker::Tracker(glm::vec3 initCameraOffset, float yRot, bool debug)
 	// Allocate memory for the serial, then acquire it
 	char *serial = (char *)(malloc(serial_size));
 	k4a_device_get_serialnum(device, serial, &serial_size);
-	printf("Opened device: %s\n", serial);
+	// printf("Opened device: %s\n", serial);
 	free(serial);
 
 	config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
