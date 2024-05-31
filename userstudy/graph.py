@@ -342,7 +342,7 @@ def graph_tracking(distance_head, distance_hand):
     plt.plot(distances, head_rates, marker='o', linestyle='-', color='#0073c0ff', label='Head Tracking (Dlib)')
     plt.plot(distances, hand_rates, marker='o', linestyle='-', color='#ff7c37ff', label='Hand Tracking (MediaPipe)')
     
-    plt.title('Tracking Success Rate at Different Distances (30 secs)')
+    # plt.title('Tracking Success Rate at Different Distances (30 secs)')
     plt.xlabel('Distance (cm)')
     plt.ylabel('Success Rate (\%)')
     plt.legend(title='Tracking Type')

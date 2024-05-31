@@ -513,9 +513,11 @@ def tracking():
         print("Failed to connect to MongoDB.")
         return
     
-    eval_collection = db["evaluation"]
+    eval_collection = db["evaluation_snapshot_4_track_distances"]
     results = eval_collection.find().sort("distance", -1).limit(100)
     
+    # Worked out it's actually + 50
+    distance_offset = 50.0
     distance_head = {}
     distance_hand = {}
     for result in results:
@@ -525,11 +527,11 @@ def tracking():
         capture_logs = tracker_logs.get("headTrack", [])
         for log in capture_logs:
             head.append(log)
-        distance_head[result.get("distance", {})] = head
+        distance_head[result.get("distance", {})+distance_offset] = head
         tracking_logs = tracker_logs.get("handTrack", [])
         for log in tracking_logs:
             hands.append(log)
-        distance_hand[result.get("distance", {})] = hands
+        distance_hand[result.get("distance", {})+distance_offset] = hands
 	
     graph.graph_tracking(distance_head, distance_hand)
  
