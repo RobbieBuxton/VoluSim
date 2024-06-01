@@ -18,10 +18,10 @@ enum Mode
 	STATIC_OFFSET = 3,
 };
 
-extern "C" const char* runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot,  bool debug);
+extern "C" const char* runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot, int mainMonitor, int offsetMonitor, int timeout, bool debug);
 void debugInitPrint();
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight, Mode trackerMode);
+GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight, Mode trackerMode, int mainMonitor, int offsetMonitor);
 void processInput(GLFWwindow *window);
 void pollTracker(Tracker *tracker, GLFWwindow *window);
 void pollCapture(Tracker *tracker, GLFWwindow *window);

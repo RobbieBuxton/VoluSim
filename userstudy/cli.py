@@ -31,8 +31,9 @@ def run():
 
 @run.command()
 def debug():
-    study.run_simulation("t", 1, "True")
-    visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    study.run_simulation("t", 1, "True",1,False)
+    study.run_simulation("to", 1, "True",1,False)
+    # visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
 @click.argument("user")
@@ -54,20 +55,11 @@ def eval(user, distance):
     print("Inserted record id:", result.inserted_id)
     
 @run.command()
-@click.option(
-    "-m",
-    type=click.Choice(["t", "to", "s", "so"], case_sensitive=False),
-    required=True,
-    help="Mode, t: Tracker, to: TrackerOffset, s: Static, so: Static Offset"
-)
-@click.option(
-    "-n",
-    type=int,
-    required=True,
-    help="Challenge number"
-)
-def demo(m,n):
-    study.run_simulation(m, -n)
+def demo():
+    for mode in ["t","s","to","so"]:
+        for challenge_num in range(1, 3):
+            study.run_simulation(mode, -challenge_num)
+    utility.play_finished()
 	
 @run.command()
 @click.argument("user_id")
@@ -99,7 +91,7 @@ def task(m, n, user_id, test):
     if not test:
         db = mongodb.connect_to_mongo()
         users_collection = db["users"]
-        results_collection = db["results"]
+        results_collection = db["results_2"]
         
         # Validate user ID exists
         if users_collection.count_documents({"_id": user},limit = 1) == 0:
@@ -137,7 +129,7 @@ def next(user_id):
         return
     
     users_collection = db["users"]
-    results_collection = db["results"]
+    results_collection = db["results_2"]
     
     # Retrieve user document
     user = users_collection.find_one({"_id": user_id})
@@ -152,7 +144,12 @@ def next(user_id):
         return
     
     # Iterate over each task in the order and check if results exist
+    all_tasks_completed = True
     for mode in task_order:
+        print(mode)
+        if not all_tasks_completed:
+            # Break out of the outer loop once we complete the first incomplete mode
+            break
         for challenge_num in range(1, 6):
             result_exists = results_collection.count_documents({
                 "user_id": user_id,
@@ -161,7 +158,8 @@ def next(user_id):
             }) > 0
             
             if not result_exists:
-                print(f"Running simulation for mode {mode} and challenge number {challenge_num} for user {user_id}.")
+                all_tasks_completed = False
+                print(f"Starting {mode}: {challenge_num}")
                 output = study.run_simulation(study.mode_map_inverse[mode], challenge_num)
                 
                 # Convert the JSON string to a Python dictionary
@@ -171,10 +169,9 @@ def next(user_id):
                 data['challenge_num'] = challenge_num
                 data['date'] = datetime.datetime.now()
                 
-                result = results_collection.insert_one(data)
-                print("Inserted record id:", result.inserted_id)
-                time.sleep(5)
-
+                results_collection.insert_one(data)
+        
+    utility.play_finished()
     print(f"All tasks for User ID {user_id} have been completed.")
 
 @cli.group()
@@ -191,7 +188,7 @@ def user(first_name, last_name):
     user_collection = mydatabase["users"]
     
     random.seed()
-    order = random.sample(["TRACKER", "TRACKER_OFFSET", "STATIC", "STATIC_OFFSET"], k=3)
+    order = random.sample(["TRACKER", "TRACKER_OFFSET", "STATIC", "STATIC_OFFSET"], k=4)
     user_data = {
         "_id": f"{first_name[:3].lower()}{last_name[:3].lower()}", 
         "first_name": first_name,
@@ -228,7 +225,7 @@ def results():
         return
     
     users_collection = db["users"]
-    results_collection = db["results"]
+    results_collection = db["valid_results"]
     
     # Retrieve all users
     users = users_collection.find()
@@ -264,7 +261,7 @@ def results():
     print(tabulate.tabulate(table, headers=headers, tablefmt="grid"))
 
 ############
-### View ###
+### Show ###
 ############
 @cli.group()
 def show():
@@ -281,7 +278,7 @@ def result(user_id):
         return
     
     users_collection = db["users"]
-    results_collection = db["results"]
+    results_collection = db["valid_results"]
 
     # Retrieve the user
     user = users_collection.find_one({"_id": user_id})
@@ -311,7 +308,7 @@ def result(user_id):
             std_dev_time_diff = "N/A"
             
             for result in results:
-                result_list = result["results"]
+                result_list = result["valid_results"]
                 completion_times = [entry["completedTime"] for entry in result_list]
                 
                 if len(completion_times) > 1:
@@ -356,7 +353,7 @@ def task(user_id,m,n):
         return
     
     users_collection = db["users"]
-    results_collection = db["results"]
+    results_collection = db["valid_results"]
 
     # Retrieve the user
     user = users_collection.find_one({"_id": user_id})
@@ -392,7 +389,16 @@ def task(user_id,m,n):
 	    
     visualize.plot_trace(eye_points, index_finger_points, middle_finger_points, challenge)
 
-
+@show.command()
+@click.option(
+    "-n",
+    type=int,
+    required=True,
+    help="Challenge number"
+)
+def demo(n):
+    visualize.plot_demo_trace(n)
+    
 @show.group()
 def eval():
     """Generate graphs"""
@@ -535,5 +541,36 @@ def tracking():
 	
     graph.graph_tracking(distance_head, distance_hand)
  
+@cli.group()
+def save():
+	"""Save various resources."""
+	pass
+
+@save.command()
+@click.argument("user_id")
+def user(user_id):
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    users_collection = db["users"]
+    results_collection = db["results_2"]
+
+    # Retrieve the user
+    user = users_collection.find_one({"_id": user_id})
+    if not user:
+        print(f"User ID {user_id} does not exist in the database.")
+        return
+    
+    user_results = results_collection.find({"user_id": user_id})
+    
+    if not user_results:
+        print(f"No results found for User ID {user_id}.")
+        return
+    
+    valid_results = db["valid_results"]
+    valid_results.insert_many(user_results)
+    
 if __name__ == "__main__":
     cli()

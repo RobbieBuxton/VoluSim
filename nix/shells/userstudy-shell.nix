@@ -13,6 +13,7 @@ pkgs.mkShell {
     python311Packages.kivy
     python311Packages.pandas
     python311Packages.scipy
+    python311Packages.simpleaudio
     (texlive.combine {
             inherit (texlive)
               scheme-full
@@ -26,7 +27,7 @@ pkgs.mkShell {
 
     # Define a function to run your Python script
     function study() {
-      sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH python3 userstudy/cli.py "$@"
+      sudo -E LD_LIBRARY_PATH=$LD_LIBRARY_PATH PYTHONPATH=$PYTHONPATH python3 userstudy/cli.py "$@"
     }
 
     echo "Type 'study' to start the user study application."

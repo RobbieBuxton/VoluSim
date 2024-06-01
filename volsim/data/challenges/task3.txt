@@ -1,5 +1,7 @@
 forward 6.0
-up 16.0
+up 8.0
+back 3.0
+up 8.0
 right 6.0
-back 6.0
-down 8.0
+back 3.0
+down 12.0

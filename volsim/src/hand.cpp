@@ -28,7 +28,7 @@ std::optional<glm::vec3> Hand::getGrabPosition()
     // Check if the hand is grabbing
     // If the distance between the middle and the index finger is less than a certain threshold, the hand is grabbing
     float distance = glm::distance(middle, index);
-    if (distance < 2.0f)
+    if (distance < 5.0f)
     {
         return (middle + index) / 2.0f;
     }

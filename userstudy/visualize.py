@@ -22,7 +22,13 @@ def plot_trace(eye_points, index_finger_points, middle_finger_points, challenge)
     # Display the plot
     plotter.show()
     
-import numpy as np
+def plot_demo_trace(challenge):
+    plotter = pv.Plotter()
+    plot_virtual_sim(plotter)
+    plot_task(plotter, challenge, demo=True)
+    plot_screen(plotter)
+    plotter.show()
+    
 
 def plot_virtual_sim(plotter):
     width = 10.0
@@ -65,9 +71,9 @@ def plot_virtual_sim(plotter):
 # plot_virtual_sim(plotter)
 
     
-def plot_task(plotter, challenge):
+def plot_task(plotter, challenge, demo=False):
     # Convert task positions to numpy array for easy manipulation
-    task_positions = np.array(get_task_positions(challenge))
+    task_positions = np.array(get_task_positions(challenge,demo))
 
     # Add task positions to the plotter
     plotter.add_points(task_positions, color="purple", point_size=8)
@@ -77,10 +83,13 @@ def plot_task(plotter, challenge):
         line = pv.Line(task_positions[i], task_positions[i + 1])
         plotter.add_mesh(line, color="purple", line_width=2)
 
-def get_task_positions(challenge):
+def get_task_positions(challenge,demo=False):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     parent_dir = os.path.dirname(dir_path)
-    lib_path = os.path.join(parent_dir, "result/data/challenges/task" + str(int(challenge)) + ".txt")
+    if demo:
+        lib_path = os.path.join(parent_dir, "result/data/challenges/demo" + str(int(challenge)) + ".txt")
+    else:
+        lib_path = os.path.join(parent_dir, "result/data/challenges/task" + str(int(challenge)) + ".txt")
     
     direction_map = {
         "up": np.array([0.0, 1.0, 0.0]),

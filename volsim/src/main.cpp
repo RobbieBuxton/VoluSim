@@ -34,7 +34,7 @@ extern "C"
 {
 	static std::string outputString;
 
-	const char *runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot, bool debug)
+	const char *runSimulation(Mode trackerMode, int challengeNum, float  camera_x, float  camera_y, float  camera_z, float  camera_rot, int mainMonitor, int offsetMonitor, int timeout, bool debug)
 	{
 		// debugInitPrint();
 
@@ -44,7 +44,7 @@ extern "C"
 		GLfloat dWidth = 34.0f;
 		GLfloat dDepth = 0.01f;
 
-		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight, trackerMode);
+		GLFWwindow *window = initOpenGL(pixelWidth, pixelHeight, trackerMode, mainMonitor, offsetMonitor);
 
 		// Robbie's Screen
 		Display display(glm::vec3(0.0f, 0.f, 0.f), dWidth, dHeight, dDepth, 1.0f, 1000.0f);
@@ -93,8 +93,6 @@ extern "C"
 
 		// Assign the time to the "startTime" key in the JSON object
 		jsonOutput["startTime"] = currentTimeInMilliseconds;
-		// int timeout = 60000;
-		int timeout = 30000;
 		glm::vec3 centre; 
 		
 		if (trackerMode == TRACKER_OFFSET || trackerMode == STATIC_OFFSET)
@@ -124,7 +122,7 @@ extern "C"
 			// Start timing the render loop
 			auto renderStartTime = std::chrono::high_resolution_clock::now();
 
-			if ((currentTimeInMilliseconds - startTimeInMilliseconds) > timeout)
+			if ((currentTimeInMilliseconds - startTimeInMilliseconds) > timeout*1000)
 			{
 				std::cout << "Timeout: " << (currentTimeInMilliseconds - startTimeInMilliseconds) << "ms" << std::endl;
 				glfwSetWindowShouldClose(window, true);
@@ -331,7 +329,7 @@ cv::Mat generateDebugPrintBox(int fps)
 	return img;
 }
 
-GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight, Mode trackerMode)
+GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight, Mode trackerMode, int mainMonitor, int offsetMonitor)
 {
 	// std::cout << "Starting GLFW context, OpenGL 4.6" << std::endl;
 	// Init GLFW
@@ -360,11 +358,11 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight, Mode trackerMode)
 	int selectedMonitorIndex ;
 	if (trackerMode == TRACKER || trackerMode == STATIC)
 	{
-		selectedMonitorIndex = 4;
+		selectedMonitorIndex = mainMonitor;
 	}
 	else
 	{
-		selectedMonitorIndex = 1;
+		selectedMonitorIndex = offsetMonitor;
 	}
 
 	GLFWmonitor* selectedMonitor = monitors[selectedMonitorIndex];
