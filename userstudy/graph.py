@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from collections import Counter
 import numpy as np
 
@@ -305,7 +306,6 @@ def graph_angles(angles):
     
 def graph_tracking(distance_head, distance_hand):
     # distance_head = {2.0: [{'success': False, 'time': 1717085224584}, {'success': True, 'time': 1717085224610}]}
-    # distance_hand = {2.0: [{'success': False, 'time': 1717085224584}, {'success': True, 'time': 1717085224610}]}
     
     plt.rcParams.update({
         "text.usetex": True,
@@ -353,3 +353,126 @@ def graph_tracking(distance_head, distance_hand):
 
     # Show the plot
     plt.show()
+
+
+# fail_rate = {user_id: { head: [{'success': False, 'time': 1717085224584}...], hand: [{'success': True, 'time': 1717085224610}]}}
+def graph_failrate(fail_rate):
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (13, 8)
+    })
+    
+    def calculate_fail_rate(attempts):
+        total_attempts = len(attempts)
+        failed_attempts = sum(1 for attempt in attempts if not attempt['success'])
+        print(failed_attempts, total_attempts)
+        fail_rate = (failed_attempts / total_attempts) * 100 if total_attempts > 0 else 0
+        return fail_rate
+
+    # Calculate fail rates
+    head_fail_rates = {user: calculate_fail_rate(attempts['head']) for user, attempts in fail_rate.items()}
+    hand_fail_rates = {user: calculate_fail_rate(attempts['hand']) for user, attempts in fail_rate.items()}
+
+    # Anonymize users
+    users = list(fail_rate.keys())
+    anonymized_users = [f'User {i+1}' for i in range(len(users))]
+    
+    head_rates = [head_fail_rates[user] for user in users]
+    hand_rates = [hand_fail_rates[user] for user in users]
+    
+    # Create a DataFrame for plotting
+    df = pd.DataFrame({
+        'User': anonymized_users,
+        'Head Fail Rate': head_rates,
+        'Hand Fail Rate': hand_rates
+    })
+
+    # Set the bar width
+    bar_width = 0.35
+
+    # Set position of bar on X axis
+    r1 = np.arange(len(df))
+    r2 = [x + bar_width for x in r1]
+
+    # Create bars
+    plt.figure(figsize=(13, 8))
+    plt.bar(r1, df['Head Fail Rate'], color='#0073c0ff', width=bar_width, edgecolor='grey', label='Head Fail Rate')
+    plt.bar(r2, df['Hand Fail Rate'], color='#ff7c37ff', width=bar_width, edgecolor='grey', label='Hand Fail Rate')
+
+    # Add xticks on the middle of the group bars
+    plt.xlabel('User', fontweight='bold')
+    plt.xticks([r + bar_width/2 for r in range(len(df))], df['User'])
+
+    # Add labels
+    plt.ylabel('Fail Rate (%)')
+    plt.title('Head vs Hand Fail Rate per User')
+    plt.legend()
+    plt.grid(True)
+
+    # Save to PDF with transparent background and tight bounding box
+    plt.savefig('misc/graphs/failrate.pdf', transparent=True, bbox_inches='tight')
+
+    # Show the plot
+    plt.show()
+        
+def graph_task_times(task_times):
+    base_colors = ['#8f45a3ff', '#ff7c37ff', '#0073c0ff', '#2aaa00ff']
+    hatches = [None, '///']  # Alternating patterns for each section (where a section is the time difference between index)
+
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (13, 8)
+    })
+
+    #This should ignore None values so if it's [[a],[b],[None],[c]] it should be sum(a,b,c) / 3. with the length ignoring none. Can you refactor this to handle that if it doesn't already 
+    def calculate_time_differences(times):
+        # Calculate the average of the differences for each task, ignoring None values
+        averaged_differences = []
+        for diff in zip(*times):
+            valid_diffs = [d for d in diff if d is not None]
+            if valid_diffs:
+                average_diff = sum(valid_diffs) / len(valid_diffs)
+            else:
+                average_diff = None
+            averaged_differences.append(average_diff)
+        return averaged_differences
+
+    for task_num, conditions in task_times.items():
+        _, ax = plt.subplots(figsize=(13, 8))
+
+        condition_labels = []
+
+        for idx, (condition, times) in enumerate(conditions.items()):
+            time_differences = calculate_time_differences(times)
+            bottom = 0
+            for section_idx, diff in enumerate(time_differences):
+                ax.bar(condition, diff, bottom=bottom, color=base_colors[idx % len(base_colors)], hatch=hatches[section_idx % len(hatches)])
+                bottom += diff
+            condition_labels.append(condition)
+        
+        # Set labels and title
+        ax.set_xlabel('Task Condition')
+        ax.set_ylabel('Time (ms)')
+        ax.set_title(f'Task {task_num} Completion Times')
+        ax.legend([plt.Rectangle((0, 0), 1, 1, color=base_colors[i % len(base_colors)]) for i in range(len(conditions))],
+                  condition_labels, title='Conditions')
+
+        # Save to PD
+        plt.savefig(f'misc/graphs/task_{task_num}_times.pdf', transparent=True, bbox_inches='tight')
+        
+        # Show the plot
+        plt.show()

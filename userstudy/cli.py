@@ -32,8 +32,8 @@ def run():
 @run.command()
 def debug():
     study.run_simulation("t", 1, "True",1,False)
-    study.run_simulation("to", 1, "True",1,False)
-    # visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    # study.run_simulation("to", 1, "True",1,False)
+    visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
 @click.argument("user")
@@ -170,6 +170,7 @@ def next(user_id):
                 data['date'] = datetime.datetime.now()
                 
                 results_collection.insert_one(data)
+                break
         
     utility.play_finished()
     print(f"All tasks for User ID {user_id} have been completed.")
@@ -399,6 +400,9 @@ def task(user_id,m,n):
 def demo(n):
     visualize.plot_demo_trace(n)
     
+############
+### Eval ###
+############   
 @show.group()
 def eval():
     """Generate graphs"""
@@ -534,13 +538,59 @@ def tracking():
         for log in capture_logs:
             head.append(log)
         distance_head[result.get("distance", {})+distance_offset] = head
-        tracking_logs = tracker_logs.get("handTrack", [])
-        for log in tracking_logs:
+        capture_logs = tracker_logs.get("handTrack", [])
+        for log in capture_logs:
             hands.append(log)
         distance_hand[result.get("distance", {})+distance_offset] = hands
 	
     graph.graph_tracking(distance_head, distance_hand)
- 
+
+@eval.command()
+def failrate():
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    
+    results = db["valid_results"].find()
+    
+    fail_rate = {}
+    for result in results:
+        id = result["user_id"]
+        if id not in fail_rate:
+            fail_rate[id] = {"head": [], "hand": []}
+
+        tracker_logs = result.get("trackerLogs", {})
+        head_track_logs = tracker_logs.get("headTrack", [])
+        for log in head_track_logs:
+            fail_rate[id]["head"].append(log)
+        
+        hand_track_logs = tracker_logs.get("handTrack", [])
+        for log in hand_track_logs:
+            fail_rate[id]["hand"].append(log)
+    
+    graph.graph_failrate(fail_rate)
+
+
+@eval.group()
+def task():
+    """Generate graphs for task completion times."""
+    pass
+
+@task.command()
+def times():
+    task_results = utility.flatten_id(utility.get_filtered_segment_times())
+    
+    graph.graph_task_times(task_results)
+
+@task.command()
+def hand():
+    hand_results = utility.get_filtered_hand_positions()
+    print(hand_results)
+    
+############
+### Save ###
+############ 
 @cli.group()
 def save():
 	"""Save various resources."""

@@ -2,6 +2,8 @@ import pyvista as pv
 import numpy as np
 import os
 
+import utility
+
 def plot_trace(eye_points, index_finger_points, middle_finger_points, challenge):
     # Create a PyVista plotter
     plotter = pv.Plotter()
@@ -84,43 +86,7 @@ def plot_task(plotter, challenge, demo=False):
         plotter.add_mesh(line, color="purple", line_width=2)
 
 def get_task_positions(challenge,demo=False):
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    parent_dir = os.path.dirname(dir_path)
-    if demo:
-        lib_path = os.path.join(parent_dir, "result/data/challenges/demo" + str(int(challenge)) + ".txt")
-    else:
-        lib_path = os.path.join(parent_dir, "result/data/challenges/task" + str(int(challenge)) + ".txt")
-    
-    direction_map = {
-        "up": np.array([0.0, 1.0, 0.0]),
-        "down": np.array([0.0, -1.0, 0.0]),
-        "forward": np.array([0.0, 0.0, 1.0]),
-        "back": np.array([0.0, 0.0, -1.0]),
-        "right": np.array([1.0, 0.0, 0.0]),
-        "left": np.array([-1.0, 0.0, 0.0])
-    }
-
-    directions = []
-    
-    try:
-        with open(lib_path, 'r') as file:
-            for line in file:
-                parts = line.strip().split()
-                if len(parts) == 2:
-                    keyword, length_str = parts
-                    try:
-                        length = float(length_str)
-                        if keyword in direction_map:
-                            directions.append(direction_map[keyword] * length)
-                        else:
-                            pass  # Unknown direction keyword, ignoring
-                    except ValueError:
-                        pass  # Invalid length format, ignoring
-                else:
-                    pass  # Invalid line format, ignoring
-    except IOError as e:
-        pass  # Handle file I/O error if necessary
-
+    directions = utility.get_mapped_directions(challenge,demo)
     start = np.array([-3.0, 7.0, 2.0])
     
     # Compute the cumulative points
