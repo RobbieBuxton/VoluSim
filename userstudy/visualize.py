@@ -24,6 +24,26 @@ def plot_trace(eye_points, index_finger_points, middle_finger_points, challenge)
     # Display the plot
     plotter.show()
     
+    
+def plot_finger_trace(finger_points, challenge):
+    # Create a PyVista plotter
+    plotter = pv.Plotter()
+    
+    # Add points to the plotter
+    colors = ["blue", "red", "green", "yellow", "purple", "orange"]
+    for person in finger_points:
+        for i, segment in enumerate(person):
+            finger_point_cloud = pv.PolyData([point for (_, point) in segment])
+            color = colors[i % len(colors)]
+            plotter.add_points(finger_point_cloud, color=color, point_size=5)
+
+    plot_screen(plotter)
+    plot_virtual_sim(plotter)
+    plot_task(plotter, challenge)
+    
+    # Display the plot
+    plotter.show()
+    
 def plot_demo_trace(challenge):
     plotter = pv.Plotter()
     plot_virtual_sim(plotter)
@@ -75,7 +95,7 @@ def plot_virtual_sim(plotter):
     
 def plot_task(plotter, challenge, demo=False):
     # Convert task positions to numpy array for easy manipulation
-    task_positions = np.array(get_task_positions(challenge,demo))
+    task_positions = np.array(utility.get_task_positions(challenge,demo))
 
     # Add task positions to the plotter
     plotter.add_points(task_positions, color="purple", point_size=8)
@@ -84,19 +104,6 @@ def plot_task(plotter, challenge, demo=False):
     for i in range(len(task_positions) - 1):
         line = pv.Line(task_positions[i], task_positions[i + 1])
         plotter.add_mesh(line, color="purple", line_width=2)
-
-def get_task_positions(challenge,demo=False):
-    directions = utility.get_mapped_directions(challenge,demo)
-    start = np.array([-3.0, 7.0, 2.0])
-    
-    # Compute the cumulative points
-    cumulative_points = [start]
-    current_position = start
-    for direction in directions:
-        current_position = current_position + direction
-        cumulative_points.append(current_position)
-
-    return cumulative_points
 
 
 def visualize_point_cloud_pyvista(file_path, z_min=0, z_max=500, distance_threshold=1000):

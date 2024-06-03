@@ -1,7 +1,11 @@
 import pyvista as pv
 import numpy as np
 
+
 def visualize_point_cloud_pyvista(file_path, left_eye_path, hand_path, z_min=0, z_max=500, distance_threshold=50):
+    
+    cam_pos = (-70, 100, 70)
+    
     data = np.loadtxt(file_path, delimiter=',', skiprows=1)
     left_eye_pos = np.loadtxt(left_eye_path, delimiter=',', skiprows=0)
     hand_positions = np.loadtxt(hand_path, delimiter=',', skiprows=1)
@@ -26,9 +30,9 @@ def visualize_point_cloud_pyvista(file_path, left_eye_path, hand_path, z_min=0, 
     plotter_eye.add_mesh(eye_glyph, color=(255, 124, 55))
     
     plotter_eye.view_isometric()
-    plotter_eye.view_xy()
-    scale = 75
-    plotter_eye.camera.position = (-scale, scale, -scale)
+    plotter_eye.view_yz()
+    
+    plotter_eye.camera.position = cam_pos
     plotter_eye.window_size = (1920, 1080)
     plotter_eye.background_color = None  # None sets it to transparent
     
@@ -44,15 +48,15 @@ def visualize_point_cloud_pyvista(file_path, left_eye_path, hand_path, z_min=0, 
     plotter_hand.add_mesh(hand_glyph, color=(143, 69, 163))
     
     plotter_hand.view_isometric()
-    plotter_hand.view_xy()
-    plotter_hand.camera.position = (-scale, scale, -scale)
+    plotter_hand.view_yz()
+    plotter_hand.camera.position = cam_pos
     plotter_hand.window_size = (1920, 1080)
     plotter_hand.background_color = None  # None sets it to transparent
     
     screenshot_hand_filename = "misc/output_hand.png"
     plotter_hand.screenshot(screenshot_hand_filename)
     plotter_hand.close()
-
+	
 # Usage example
 visualize_point_cloud_pyvista("misc/pointCloud.csv", "misc/leftEyePos.csv", "misc/hand.csv")
 

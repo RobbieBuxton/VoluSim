@@ -17,21 +17,20 @@ import graph
 
 @click.group()
 def cli():
-    """ Command line interface for managing operations. """
+    """ Command line interface for running the Volumetric User Study."""
     pass
-
 
 ############
 ### Run  ###
 ############
 @cli.group
 def run():
-	"""run"""
+	""" [ debug | eval | demo | task | next ]"""
 	pass
 
 @run.command()
 def debug():
-    study.run_simulation("t", 1, "True",1,False)
+    # study.run_simulation("t", 1, "True",1,False)
     # study.run_simulation("to", 1, "True",1,False)
     visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
@@ -175,9 +174,12 @@ def next(user_id):
     utility.play_finished()
     print(f"All tasks for User ID {user_id} have been completed.")
 
+############
+### Add  ###
+############
 @cli.group()
 def add():
-    """add"""
+    """[ user ]"""
     pass
 
 @add.command()
@@ -205,7 +207,7 @@ def user(first_name, last_name):
 ############
 @cli.group()
 def list():
-    """List various resources."""
+    """[ users | results ]"""
     pass
 
 @list.command()
@@ -266,7 +268,7 @@ def results():
 ############
 @cli.group()
 def show():
-    """List various resources."""
+    """[ result | task | eval ]"""
     pass
 
 @show.command()
@@ -586,14 +588,20 @@ def times():
 @task.command()
 def hand():
     hand_results = utility.get_filtered_hand_positions()
-    print(hand_results)
+    points = []
+    for key in hand_results:
+        points.append(hand_results[key][1]["TRACKER"])
+        points.append(hand_results[key][1]["STATIC"])
+        points.append(hand_results[key][1]["TRACKER_OFFSET"])
+        points.append(hand_results[key][1]["STATIC_OFFSET"])
+    visualize.plot_finger_trace(points,1)
     
 ############
 ### Save ###
 ############ 
 @cli.group()
 def save():
-	"""Save various resources."""
+	"""[ user ]"""
 	pass
 
 @save.command()

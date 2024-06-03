@@ -85,7 +85,10 @@ def get_filtered_hand_positions():
         trackerLogs = result["trackerLogs"]
         hand = trackerLogs["hand"]
         for pos in hand:
-            middle = np.array([(pos["middle"]["x"] + pos["index"]["x"])/2.0, (pos["middle"]["y"] + pos["index"]["y"])/2.0, (pos["middle"]["z"] + pos["index"]["z"])/2.0])
+            x_offset = 0
+            if mode == "TRACKER_OFFSET" or mode == "STATIC_OFFSET":
+                x_offset = 60
+            middle = np.array([(pos["middle"]["x"] + pos["index"]["x"])/2.0 + x_offset, (pos["middle"]["y"] + pos["index"]["y"])/2.0, (pos["middle"]["z"] + pos["index"]["z"])/2.0])
             
             if pos["time"] < seg_ranges[id][num][mode][0][0]:
                 hand_results[id][num][mode][0].append((pos["time"],middle))
@@ -226,3 +229,16 @@ def get_mapped_directions(challenge, demo=False):
             mapped_directions.append(direction_map[keyword] * length)
     
     return mapped_directions
+
+def get_task_positions(challenge,demo=False):
+    directions = get_mapped_directions(challenge,demo)
+    start = np.array([-3.0, 7.0, 2.0])
+    
+    # Compute the cumulative points
+    cumulative_points = [start]
+    current_position = start
+    for direction in directions:
+        current_position = current_position + direction
+        cumulative_points.append(current_position)
+
+    return cumulative_points

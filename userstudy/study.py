@@ -5,7 +5,7 @@ import sys
 import utility
 
 # Camera Offser
-camera_x, camera_y, camera_z, camera_rot = -2.5, 63.0, 30.0, 117.5
+camera_x, camera_y, camera_z, camera_rot = -1.5, 64.0, 29.0, 117.5
 
 mainMonitor = 1
 offsetMonitor = 4

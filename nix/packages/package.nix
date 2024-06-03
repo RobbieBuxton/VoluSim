@@ -12,7 +12,6 @@
       python310Packages.glad2
       bzip2
       glxinfo
-      # breakpointHook # Should look into getting this working
     ];
 
     buildInputs = with pkgs; [
