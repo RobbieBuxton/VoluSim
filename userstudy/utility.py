@@ -35,6 +35,7 @@ def get_hand_fails_times(threshold=5):
     
     results = db["valid_results"].find()
     
+    
     hand_fail = {}  # Initialize the hand_fail dictionary
     for result in results:
         id = result["user_id"]

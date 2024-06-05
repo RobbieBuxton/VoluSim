@@ -4,7 +4,6 @@ import click
 import tabulate
 import random
 from statistics import mean, stdev
-import time
 import datetime
 import math
 
@@ -30,9 +29,10 @@ def run():
 
 @run.command()
 def debug():
+    study.run_simulation("t", 1, False,60,False)
     # study.run_simulation("t", 1, "True",1,False)
     # study.run_simulation("to", 1, "True",1,False)
-    visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    # visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
 @click.argument("user")
@@ -90,7 +90,7 @@ def task(m, n, user_id, test):
     if not test:
         db = mongodb.connect_to_mongo()
         users_collection = db["users"]
-        results_collection = db["results_2"]
+        results_collection = db["results_4"]
         
         # Validate user ID exists
         if users_collection.count_documents({"_id": user},limit = 1) == 0:
@@ -128,7 +128,7 @@ def next(user_id):
         return
     
     users_collection = db["users"]
-    results_collection = db["results_2"]
+    results_collection = db["results_4"]
     
     # Retrieve user document
     user = users_collection.find_one({"_id": user_id})
@@ -497,7 +497,7 @@ def angles():
     triangle_lengths = {
         "A": {"left": [50.0, 57.0, 101.5], "right": [50.0, 58.0, 98.5]}, #Elizibeta
         "B": {"left": [50.0, 59.5, 100.0], "right": [50.0, 61.0, 101.5]}, #Stylianos
-        "C": {"left": [50.0, 55.5, 99.0], "right": [50.0, 52.0, 89.0]}, #Hoshin
+        "C": {"left": [50.0, 55.5,  99.0], "right": [50.0, 52.0, 89.0]}, #Hoshin
         "D": {"left": [50.0, 58.0, 104.0], "right": [50.0, 55.0, 96.0]} #Robby
         # Add more users as needed
     }
@@ -613,7 +613,7 @@ def user(user_id):
         return
     
     users_collection = db["users"]
-    results_collection = db["results_2"]
+    results_collection = db["results_4"]
 
     # Retrieve the user
     user = users_collection.find_one({"_id": user_id})

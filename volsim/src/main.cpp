@@ -190,7 +190,8 @@ extern "C"
 				renderer->drawImage(depthCameraImportant);
 			}
 			// renderer->drawRoom();
-			// renderer->renderErato();
+			// Chess Set Demo
+			// renderer->drawChessSet();
 			if (challenge.isFinished())
 			{
 				glfwSetWindowShouldClose(window, true);

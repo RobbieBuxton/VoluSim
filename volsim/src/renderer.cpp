@@ -13,26 +13,26 @@ Renderer::Renderer(Display display)
     this->line = std::make_unique<Model>("data/resources/models/cylinder.obj");
 	this->cube = std::make_unique<Model>("data/resources/models/cube.obj");
     this->room = std::make_unique<Model>("data/resources/models/room.obj");
-	// this->erato = std::make_unique<Model>("data/resources/models/erato.obj");
+	this->chessSet = std::make_unique<Model>("data/resources/models/chessSet.obj");
     this->modelShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
     this->imageShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/image.vs").c_str(), FileSystem::getPath("data/shaders/image.fs").c_str());
     this->display = std::make_unique<Display>(display);
 }
 
 
-// void Renderer::renderErato() {
-// 	setupShader();
+void Renderer::drawChessSet() {
+	setupShader();
 
-//     glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
-// 	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-//     glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 20.0f, 0.0f));
-//     glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 25.0f, 2.0f));
+    glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
 	
-//     modelShader->setMat4("model", model);
-//     erato->draw(*modelShader.get());
-// }
+    modelShader->setMat4("model", model);
+    chessSet->draw(*modelShader.get());
+}
 
 glm::mat4 Renderer::calculateRotation(glm::vec3 start, glm::vec3 end)
 {
