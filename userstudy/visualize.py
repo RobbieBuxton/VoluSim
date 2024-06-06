@@ -117,22 +117,48 @@ def visualize_point_cloud_pyvista(file_path, z_min=0, z_max=500, distance_thresh
     z_normalized = np.clip(z_normalized, 0, 1)  # Ensure values are between 0 and 1
     
     point_cloud = pv.PolyData(filtered_data[:, :3])
-    plotter = pv.Plotter()
+    plotter_pre = pv.Plotter(off_screen=True)
     
     # Use the 'coolwarm' colormap, with colors based on normalized z-values
-    plotter.add_points(point_cloud, scalars=z_normalized, cmap="coolwarm", point_size=1.5)
+    plotter_pre.add_points(point_cloud, scalars=z_normalized, cmap="coolwarm", point_size=1.5, render_points_as_spheres=True, scalar_bar_args={'title': None, 'n_labels': 0, 'label_font_size': 0, 'color': None, 'position_x': -1, 'position_y': -1})
     
-    plot_screen(plotter)
-
-    plotter.view_xz()
-    plotter.camera.position = (1, 1, 0)
+    # Hide the scalar bar if it still shows up
+    plotter_pre.scalar_bar.SetVisibility(False)
     
-    plotter.add_axes(interactive=False, line_width=5, labels_off=False)
+    plot_screen(plotter_pre, (10,10,0))
 
-    plotter.show()
+    plotter_pre.view_xz()
+    plotter_pre.camera.position = (0, 300, 100)
+    
+    # plotter.add_axes(interactive=False, line_width=5, labels_off=False)
+    
+    # plotter.show()
+    
+    screenshot_eye_filename = "misc/calibration_pre.png"
+    plotter_pre.screenshot(screenshot_eye_filename)
+    
+    plotter_post = pv.Plotter(off_screen=True)
+    
+    # Use the 'coolwarm' colormap, with colors based on normalized z-values
+    plotter_post.add_points(point_cloud, scalars=z_normalized, cmap="coolwarm", point_size=1.5, render_points_as_spheres=True, scalar_bar_args={'title': None, 'n_labels': 0, 'label_font_size': 0, 'color': None, 'position_x': -1, 'position_y': -1})
+    
+    # Hide the scalar bar if it still shows up
+    plotter_post.scalar_bar.SetVisibility(False)
+    
+    plot_screen(plotter_post)
+
+    plotter_post.view_xz()
+    plotter_post.camera.position = (0, 300, 100)
+    
+    # plotter.add_axes(interactive=False, line_width=5, labels_off=False)
+    
+    # plotter.show()
+    
+    screenshot_eye_filename = "misc/calibration_post.png"
+    plotter_post.screenshot(screenshot_eye_filename)
     
 
-def plot_screen(plotter):
+def plot_screen(plotter, offset = (0,0,0)):
     # Define the four points
     screen_width = 34.0
     screen_height = 52.0
@@ -141,10 +167,10 @@ def plot_screen(plotter):
         [screen_width/2, 0, 0],
         [-screen_width/2, screen_height, 0],
         [screen_width/2, screen_height, 0]
-    ])
+    ]) + offset
     
     # Add the points to the plotter
-    plotter.add_points(screen_points, color='green', point_size=10)
+    plotter.add_points(screen_points, color='green', point_size=10, scalar_bar_args={'title': None, 'n_labels': 0, 'label_font_size': 0, 'color': None, 'position_x': -1, 'position_y': -1})
 
     # Define the rectangle edges
     screen_edges = np.array([
@@ -157,4 +183,3 @@ def plot_screen(plotter):
     # Add the rectangle edges to the plotter
     for edge in screen_edges:
         plotter.add_lines(edge, color='yellow', width=5)
-    

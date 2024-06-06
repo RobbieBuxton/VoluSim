@@ -3,6 +3,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from collections import Counter
 import numpy as np
+import seaborn as sns
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+
+
+import utility
 
 def graph_framerate_overall(challenge_times):
     
@@ -421,7 +427,7 @@ def graph_failrate(fail_rate):
 
     # Show the plot
     plt.show()
-        
+                      
 def graph_task_times(task_times):
     base_colors = ['#8f45a3ff', '#ff7c37ff', '#0073c0ff', '#2aaa00ff']
     hatches = [None, '///']  # Alternating patterns for each section (where a section is the time difference between index)
@@ -438,26 +444,13 @@ def graph_task_times(task_times):
         "figure.figsize": (13, 8)
     })
 
-    #This should ignore None values so if it's [[a],[b],[None],[c]] it should be sum(a,b,c) / 3. with the length ignoring none. Can you refactor this to handle that if it doesn't already 
-    def calculate_time_differences(times):
-        # Calculate the average of the differences for each task, ignoring None values
-        averaged_differences = []
-        for diff in zip(*times):
-            valid_diffs = [d for d in diff if d is not None]
-            if valid_diffs:
-                average_diff = sum(valid_diffs) / len(valid_diffs)
-            else:
-                average_diff = None
-            averaged_differences.append(average_diff)
-        return averaged_differences
-
     for task_num, conditions in task_times.items():
         _, ax = plt.subplots(figsize=(13, 8))
 
         condition_labels = []
 
         for idx, (condition, times) in enumerate(conditions.items()):
-            time_differences = calculate_time_differences(times)
+            time_differences = utility.calculate_time_differences(times)
             bottom = 0
             for section_idx, diff in enumerate(time_differences):
                 ax.bar(condition, diff, bottom=bottom, color=base_colors[idx % len(base_colors)], hatch=hatches[section_idx % len(hatches)])
@@ -476,3 +469,99 @@ def graph_task_times(task_times):
         
         # Show the plot
         plt.show()
+        
+def graph_ttest(task_times):
+    base_colors = ['#8f45a3ff', '#ff7c37ff']  # Colors for STATIC and TRACKER
+    hatches = [None, '///']  # Patterns for each condition
+
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (13, 8)
+    })
+
+    for user, conditions in task_times.items():
+        _, ax = plt.subplots(figsize=(13, 8))
+
+        condition_labels = list(conditions.keys())
+
+        for idx, condition in enumerate(condition_labels):
+            times = conditions.get(condition, [])
+            time_differences = times  # Assuming times are already the differences you want to plot
+            bottom = 0
+            for section_idx, diff in enumerate(time_differences):
+                ax.bar(condition, diff, bottom=bottom, color=base_colors[idx], hatch=hatches[section_idx % len(hatches)])
+                bottom += diff
+        
+        # Set labels and title
+        ax.set_xlabel('Condition')
+        ax.set_ylabel('Time (ms)')
+        ax.set_title(f'User {user} Completion Times')
+        ax.legend([plt.Rectangle((0, 0), 1, 1, color=base_colors[i]) for i in range(len(condition_labels))],
+                  condition_labels, title='Conditions')
+
+        # Save to PDF
+        plt.savefig(f'misc/graphs/user_{user}_times.pdf', transparent=True, bbox_inches='tight')
+        
+        # Show the plot
+        plt.show()
+        
+        
+def graph_anova(results):
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (13, 8)
+    })
+
+    rows = []
+    for user, conditions in results.items():
+        for task_id, times in conditions.items():
+            for condition, time_list in times.items():
+                for time in time_list:
+                    rows.append({
+                        'User': user,
+                        'Task': task_id,
+                        'Condition': condition,
+                        'Time': time
+                    })
+
+    # Creating DataFrame
+    df = pd.DataFrame(rows)
+
+    # Performing ANOVA
+    # Since you have two factors (e.g., TRACKER/STATIC and OFFSET/NOT_OFFSET), you need to separate them
+    df['Type'] = df['Condition'].apply(lambda x: 'TRACKER' if 'TRACKER' in x else 'STATIC')
+    df['Offset'] = df['Condition'].apply(lambda x: 'OFFSET' if 'OFFSET' in x else 'NOT_OFFSET')
+
+    # Perform the ANOVA
+    model = ols('Time ~ C(Type) * C(Offset)', data=df).fit()
+    anova_table = sm.stats.anova_lm(model, typ=2)
+
+    print(anova_table)
+
+    # Plotting interaction plot
+    plt.figure(figsize=(13, 8))
+    sns.pointplot(data=df, x='Offset', y='Time', hue='Type', dodge=True, markers=['o', 's'], capsize=.1, errwidth=1, palette='colorblind')
+    plt.title('Interaction between Type and Offset')
+    plt.xlabel('Offset')
+    plt.ylabel('Time (ms)')
+    plt.legend(title='Type')
+
+    # Save to PDF with transparent background and tight bounding box
+    plt.savefig('misc/graphs/anova_interaction.pdf', transparent=True, bbox_inches='tight')
+
+    # Show the plot
+    plt.show()

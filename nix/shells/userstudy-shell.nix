@@ -14,6 +14,9 @@ pkgs.mkShell {
     python311Packages.pandas
     python311Packages.scipy
     python311Packages.simpleaudio
+    python311Packages.statsmodels
+    python311Packages.seaborn
+    python311Packages.matplotlib
     (texlive.combine {
             inherit (texlive)
               scheme-full

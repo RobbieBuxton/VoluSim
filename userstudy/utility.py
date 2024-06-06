@@ -2,8 +2,12 @@ from bson import ObjectId
 import simpleaudio as sa
 import os
 import numpy as np
+from scipy import stats
 
 import mongodb
+
+# search_condition = {"user_id": "alenea"}
+search_condition = {}
 
 # Helper function to handle MongoDB ObjectId when serializing to JSON
 def json_encoder(o):
@@ -33,7 +37,7 @@ def get_hand_fails_times(threshold=5):
         print("Failed to connect to MongoDB.")
         return
     
-    results = db["valid_results"].find()
+    results = db["valid_results"].find(search_condition)
     
     
     hand_fail = {}  # Initialize the hand_fail dictionary
@@ -68,7 +72,7 @@ def get_filtered_hand_positions():
         print("Failed to connect to MongoDB.")
         return
     
-    valid_results = db["valid_results"].find()
+    valid_results = db["valid_results"].find(search_condition)
     
     hand_results = {}  # Initialize the segment_results dictionary
     for result in valid_results:
@@ -108,7 +112,7 @@ def segment_ranges():
         print("Failed to connect to MongoDB.")
         return None
 
-    results = db["valid_results"].find()
+    results = db["valid_results"].find(search_condition)
     
     segment_results = {}  # Initialize the segment_results dictionary
     for result in results:
@@ -154,6 +158,7 @@ def get_filtered_segment_times():
                 for start_time, end_time in times:
                     filtered_hand_fail = [time for time in hand_fail[id][num][mode] if start_time <= time <= end_time]
                     if filtered_hand_fail:
+                        # print(id, len(filtered_hand_fail))
                         diff = None
                     else:
                         diff = end_time - start_time
@@ -243,3 +248,161 @@ def get_task_positions(challenge,demo=False):
         cumulative_points.append(current_position)
 
     return cumulative_points
+
+def calculate_time_differences(times):
+    # Calculate the average of the differences for each task, ignoring None values
+    averaged_differences = []
+    for diff in zip(*times):
+        valid_diffs = [d for d in diff if d is not None]
+
+        if (len(valid_diffs) != len(diff)):
+            print(f"ERROR: None values in {diff}")  
+        if valid_diffs:
+            average_diff = sum(valid_diffs) / len(valid_diffs)
+        else:
+            print("This shouldn't happen")
+            average_diff = None
+        averaged_differences.append(average_diff)
+    return averaged_differences
+
+def combine_task_results(task_results, combine_by_offset=False):
+    combined_results = {}
+
+    for id_value, challenges in task_results.items():
+        combined_results[id_value] = {}
+        for challenge_num, modes in challenges.items():
+            combined_results[id_value][challenge_num] = {}
+
+            if combine_by_offset:
+                # Combine TRACKER and STATIC with their respective offsets
+                not_offset = modes['TRACKER'] + modes['STATIC']
+                offset = modes['TRACKER_OFFSET'] + modes['STATIC_OFFSET']
+                
+                combined_results[id_value][challenge_num]['NOT_OFFSET'] = not_offset
+                combined_results[id_value][challenge_num]['OFFSET'] = offset
+            else:
+                tracker_combined = modes['TRACKER'] + modes['TRACKER_OFFSET']
+                static_combined = modes['STATIC'] + modes['STATIC_OFFSET']
+            
+                combined_results[id_value][challenge_num]['TRACKER'] = tracker_combined
+                combined_results[id_value][challenge_num]['STATIC'] = static_combined
+
+    return combined_results
+
+def combine_challenges_results(challenge_results):
+    combined_data = {}
+
+    for key, challenges in challenge_results.items():
+        combined_data[key] = {}
+        for challenge in sorted(challenges.keys()):
+            for sub_key, values in challenges[challenge].items():
+                if sub_key not in combined_data[key]:
+                    combined_data[key][sub_key] = []
+                combined_data[key][sub_key] += values
+
+    return combined_data
+
+def results_averages(results):
+    from collections import defaultdict
+    import numpy as np
+
+    averages = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
+    # Collect all values for each index, ignoring None
+    for user, tasks in results.items():
+        for task, metrics in tasks.items():
+            for metric, values in metrics.items():
+                for i, value in enumerate(values):
+                    if value is not None:
+                        averages[task][metric][i].append(value)
+    
+    # Calculate the averages
+    average_results = {}
+    for task, metrics in averages.items():
+        average_results[task] = {}
+        for metric, indices in metrics.items():
+            average_results[task][metric] = []
+            for i in range(len(indices)):
+                if indices[i]:
+                    average_results[task][metric].append(np.mean(indices[i]))
+                else:
+                    average_results[task][metric].append(None)  # Handle cases where all values were None
+    
+    return average_results
+
+def fill_nones(results):
+    res_averages = results_averages(results)
+    
+    filled_results = {}
+
+    for user, tasks in results.items():
+        filled_results[user] = {}
+        for task, metrics in tasks.items():
+            filled_results[user][task] = {}
+            for metric, values in metrics.items():
+                filled_results[user][task][metric] = []
+                for i, value in enumerate(values):
+                    if value is None:
+                        # Replace None with the average from res_averages
+                        filled_results[user][task][metric].append(res_averages[task][metric][i])
+                    else:
+                        filled_results[user][task][metric].append(value)
+    
+    return filled_results
+
+def get_condition_sums(data):
+    condition_sums = {}
+
+    for user in data:
+        for condition in data[user]:
+            if condition not in condition_sums:
+                condition_sums[condition] = []
+            condition_sums[condition].append(sum(data[user][condition]))
+
+    return condition_sums
+
+def perform_ttest(data):
+    
+    results = {}
+    conditions = list(data.keys())
+
+    # Perform pairwise t-tests between all conditions
+    for i in range(len(conditions)):
+        for j in range(i+1, len(conditions)):
+            cond1 = conditions[i]
+            cond2 = conditions[j]
+            t_stat, p_value = stats.ttest_ind(data[cond1], data[cond2])
+            results[(cond1, cond2)] = (t_stat, p_value)
+
+    return results
+
+def perform_anova(data):
+    """
+    Perform ANOVA test on the provided dataset.
+
+    Parameters:
+    data (dict): A dictionary containing lists of values for each group.
+
+    Returns:
+    tuple: F-value and P-value from the ANOVA test.
+    """
+    # Extract lists from the dictionary
+    tracker = data['TRACKER']
+    tracker_offset = data['TRACKER_OFFSET']
+    static = data['STATIC']
+    static_offset = data['STATIC_OFFSET']
+
+    # Perform ANOVA
+    f_val, p_val = stats.f_oneway(tracker, tracker_offset, static, static_offset)
+
+    # Print the results
+    print(f"F-value: {f_val}")
+    print(f"P-value: {p_val}")
+
+    # Interpretation
+    if p_val < 0.05:
+        print("The test result is significant; at least one of the group means is different.")
+    else:
+        print("The test result is not significant; no significant difference between the group means.")
+    
+    return f_val, p_val

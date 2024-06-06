@@ -14,6 +14,14 @@ import mongodb
 import visualize
 import graph
 
+##### TEMP #####
+import pandas as pd
+from scipy.stats import f_oneway
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 @click.group()
 def cli():
     """ Command line interface for running the Volumetric User Study."""
@@ -29,10 +37,10 @@ def run():
 
 @run.command()
 def debug():
-    study.run_simulation("t", 1, False,60,False)
-    # study.run_simulation("t", 1, "True",1,False)
+    # study.run_simulation("t", 1, False,60,False)
+    study.run_simulation("t", 1, "True",1,False)
     # study.run_simulation("to", 1, "True",1,False)
-    # visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
 @click.argument("user")
@@ -580,8 +588,15 @@ def task():
     pass
 
 @task.command()
+def ttest():
+    
+    graph.graph_anova(utility.get_filtered_segment_times())
+
+    
+
+@task.command()
 def times():
-    task_results = utility.flatten_id(utility.get_filtered_segment_times())
+    task_results = utility.flatten_id(utility.fill_nones(utility.get_filtered_segment_times()))
     
     graph.graph_task_times(task_results)
 
