@@ -1,9 +1,6 @@
 { pkgs }:
 pkgs.mkShell {
   name = "userstudy-shell";
-
-
-
   packages = with pkgs; [   
     python311Packages.pymongo
     python311Packages.click

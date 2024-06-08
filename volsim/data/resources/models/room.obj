@@ -1,9 +1,6 @@
 mtllib scene.mtl
 
 g Room
-
-usemtl Material_004
-
 v  -0.50 -0.50 -0.50
 v  -0.50 0.50 -0.50
 v  0.50 0.50 -0.50

@@ -7,3 +7,4 @@ database
 *.log.*
 *.xlsx
 volsim/data/resources/models/rungholt.obj
+volsim/data/resources/models/house.obj

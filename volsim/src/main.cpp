@@ -189,9 +189,9 @@ extern "C"
 				renderer->drawImage(colourCameraSkeleton);
 				renderer->drawImage(depthCameraImportant);
 			}
-			renderer->drawRoom();
+			// renderer->drawRoom();
 			// Chess Set Demo
-			renderer->drawChessSet();
+			renderer->drawRungholt();
 			// renderer->drawTeapot();
 
 			if (challenge.isFinished())
@@ -402,6 +402,9 @@ GLFWwindow *initOpenGL(GLuint pixelWidth, GLuint pixelHeight, Mode trackerMode, 
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	return window;
 }

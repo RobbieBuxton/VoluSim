@@ -455,7 +455,6 @@ def load_excel():
     
     return data_dict
     
-
 def calculate_movement(points):
     movement_array = []
     for i in range(1, len(points)):

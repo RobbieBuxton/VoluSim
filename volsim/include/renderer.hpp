@@ -17,7 +17,7 @@ public:
     void drawLine(glm::vec3 start, glm::vec3 end, float radius = 0.1f, int colorIdx = 0);
     void drawPoint(glm::vec3 position, float radius = 0.1f, int colorIdx = 0);
 	void drawCuboid(glm::vec3 position, float width, float length, float height, int colorIdx = 0);
-    void drawChessSet();
+    void drawRungholt();
 	void drawTeapot();
 	void drawImage(Image &image);
     void drawRoom();
@@ -30,7 +30,7 @@ private:
     std::unique_ptr<Model> line;
 	std::unique_ptr<Model> cube;
     std::unique_ptr<Model> room;
-	std::unique_ptr<Model> chessSet;
+	std::unique_ptr<Model> rungholt;
 	std::unique_ptr<Model> teapot;
     std::unique_ptr<Shader> modelShader;
     std::unique_ptr<Shader> imageShader;
