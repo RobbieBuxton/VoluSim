@@ -616,6 +616,8 @@ def hand():
 @task.command()
 def eye():
 	values = utility.get_eye_positions()
+	graph.graph_eye_movement(utility.compute_movement_metrics(values))
+	
 
 @eval.group()
 def survey():

@@ -4,8 +4,9 @@ import os
 import numpy as np
 from scipy import stats
 import pandas as pd
-
+import math
 import mongodb
+import statistics
 
 # search_condition = {"user_id": "alenea"}
 search_condition = {}
@@ -454,3 +455,31 @@ def load_excel():
     
     return data_dict
     
+
+def calculate_movement(points):
+    movement_array = []
+    for i in range(1, len(points)):
+        x1, y1, z1 = points[i-1][1]
+        x2, y2, z2 = points[i][1]
+        distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+        time_diff = points[i][0] - points[i-1][0]
+        movement_array.append(distance/time_diff)
+    return movement_array
+
+def compute_movement_metrics(data):
+    results = {}
+    for user, tasks in data.items():
+        results[user] = {}
+        for task_number, conditions in tasks.items():
+            results[user][task_number] = {}
+            for condition, point_segments in conditions.items():
+                segments = []
+                for segment in point_segments:
+                    segment_movements = calculate_movement(segment)
+                    segments.append(
+                        statistics.mean(segment_movements)
+                        # "median": statistics.median(segment_movements),
+                        # "std": np.std(segment_movements)
+                    )
+                results[user][task_number][condition] = segments
+    return results

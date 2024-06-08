@@ -6,7 +6,7 @@ import numpy as np
 import seaborn as sns
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
-
+from scipy.stats import ttest_ind
 
 import utility
 
@@ -765,4 +765,78 @@ def graph_reliable_accurate(data_list):
     # Save to PDF with transparent background and tight bounding box
     plt.savefig('misc/graphs/reliable-accurate.pdf', transparent=True, bbox_inches='tight')
 
+    plt.show()
+
+def graph_eye_movement(data):
+    
+    # Prepare figure with LaTeX style
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (13, 8)
+    })
+
+    tracker_data_combined = []
+    tracker_offset_data_combined = []
+
+    for user in data.keys():
+        for _, conditions in data[user].items():
+            tracker_data_combined.extend(conditions['TRACKER'])
+            tracker_offset_data_combined.extend(conditions['TRACKER_OFFSET'])
+
+    # Perform t-test
+    t_stat, p_value = ttest_ind(tracker_data_combined, tracker_offset_data_combined)
+    print(f"T-statistic: {t_stat:.4f}, P-value: {p_value:.4f}")
+
+    # Calculate combined statistics
+    if tracker_data_combined:
+        tracker_mean = np.mean(tracker_data_combined)
+        tracker_std = np.std(tracker_data_combined)
+    else:
+        tracker_mean = 0
+        tracker_std = 0
+
+    if tracker_offset_data_combined:
+        tracker_offset_mean = np.mean(tracker_offset_data_combined)
+        tracker_offset_std = np.std(tracker_offset_data_combined)
+    else:
+        tracker_offset_mean = 0
+        tracker_offset_std = 0
+
+    means = [tracker_mean, tracker_offset_mean]
+    stds = [tracker_std, tracker_offset_std]
+    labels = ['TRACKER', 'TRACKER_OFFSET']
+    colors = ['#0073c0ff', '#ff7c37ff']
+
+    fig, ax = plt.subplots()
+
+    rects = ax.bar(labels, means, yerr=stds, capsize=5, color=colors)
+
+    ax.set_ylabel('Mean Values')
+    ax.set_title('Combined Mean Eye Movement Values and Standard Deviations')
+
+    def autolabel(rects):
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(f'{height:.4f}',
+				xy=(rect.get_x() + rect.get_width() / 2, height),
+				xytext=(0, 3),
+				textcoords="offset points",
+				ha='center', va='bottom')
+
+    autolabel(rects)
+
+    # # Display the T-Test results on the plot
+    # ax.text(0.5, 0.05, f'T-test: t={t_stat:.4f}, p={p_value:.4f}',
+    #         transform=ax.transAxes, ha='center', va='center', fontsize=12, color='red')
+
+    fig.tight_layout()
+
+    plt.savefig('misc/graphs/combined-eye-movement.pdf', transparent=True, bbox_inches='tight')
     plt.show()
