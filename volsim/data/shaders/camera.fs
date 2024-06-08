@@ -18,6 +18,9 @@ uniform int overrideMaterialID = -1;  // Default value indicating no override
 
 uniform sampler2D ourTexture;
 
+// New uniform to control Phong shading
+uniform bool usePhongShading = true;
+
 void main()
 {
     // Determine active material ID
@@ -40,6 +43,10 @@ void main()
     vec3 specularLight = shininess[activeMaterialID] * spec * specular[activeMaterialID];  
     
     // Combine lighting components
-    vec3 result = (ambientLight + diffuseLight + specularLight);
+    vec3 phongColor = ambientLight + diffuseLight + specularLight;
+
+    // If Phong shading is off, use the color that would be shown with Phong shading
+    vec3 result = usePhongShading ? phongColor : ambient[activeMaterialID];
+
     FragColor = vec4(result, 1.0);
 }

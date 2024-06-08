@@ -3,6 +3,7 @@ import simpleaudio as sa
 import os
 import numpy as np
 from scipy import stats
+import pandas as pd
 
 import mongodb
 
@@ -65,6 +66,43 @@ def get_hand_fails_times(threshold=5):
         # print(id, len(hand_fail[id][num][mode]))
     return hand_fail
 
+def get_eye_positions():
+    seg_ranges = segment_ranges()
+    db = mongodb.connect_to_mongo()
+    if db is None:
+        print("Failed to connect to MongoDB.")
+        return
+    valid_results = db["valid_results"].find(search_condition)
+    eye_results = {}  # Initialize the eye_results dictionary
+    for result in valid_results:
+        id = result["user_id"]
+        num = result["challenge_num"]
+        mode = result["mode"]
+        
+        if (mode == "STATIC" or mode == "STATIC_OFFSET"):
+            continue
+        
+        if id not in eye_results:
+            eye_results[id] = {}
+        if num not in eye_results[id]:
+            eye_results[id][num] = {}
+        if mode not in eye_results[id][num]:
+            eye_results[id][num][mode] = [[] for _ in range(len(seg_ranges[id][num][mode])+1)]
+            
+        trackerLogs = result["trackerLogs"]
+        eyePoss = trackerLogs["leftEye"]
+        
+        for pos in eyePoss:
+            if pos["time"] < seg_ranges[id][num][mode][0][0]:
+                eye_results[id][num][mode][0].append((pos["time"],(pos["x"],pos["y"],pos["z"])))
+            for i in range(len(seg_ranges[id][num][mode])):
+                if seg_ranges[id][num][mode][i][0] <= pos["time"] <= seg_ranges[id][num][mode][i][1]:
+                    eye_results[id][num][mode][i].append((pos["time"],(pos["x"],pos["y"],pos["z"])))
+                    break
+            else:
+                eye_results[id][num][mode][-1].append((pos["time"],(pos["x"],pos["y"],pos["z"])))
+    return eye_results
+    
 def get_filtered_hand_positions():
     seg_ranges = segment_ranges()
     db = mongodb.connect_to_mongo()
@@ -406,3 +444,13 @@ def perform_anova(data):
         print("The test result is not significant; no significant difference between the group means.")
     
     return f_val, p_val
+
+def load_excel():
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    excel_path = os.path.join(dir_path, f"survey/main.xlsx")
+    df = pd.read_excel(excel_path)
+    
+    data_dict = df.to_dict(orient='records')
+    
+    return data_dict
+    

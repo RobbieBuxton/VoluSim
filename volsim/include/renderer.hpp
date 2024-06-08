@@ -18,6 +18,7 @@ public:
     void drawPoint(glm::vec3 position, float radius = 0.1f, int colorIdx = 0);
 	void drawCuboid(glm::vec3 position, float width, float length, float height, int colorIdx = 0);
     void drawChessSet();
+	void drawTeapot();
 	void drawImage(Image &image);
     void drawRoom();
     void updateEyePos(glm::vec3 currentEyePos);
@@ -30,6 +31,7 @@ private:
 	std::unique_ptr<Model> cube;
     std::unique_ptr<Model> room;
 	std::unique_ptr<Model> chessSet;
+	std::unique_ptr<Model> teapot;
     std::unique_ptr<Shader> modelShader;
     std::unique_ptr<Shader> imageShader;
     std::unique_ptr<Display> display;

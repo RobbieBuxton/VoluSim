@@ -14,14 +14,6 @@ import mongodb
 import visualize
 import graph
 
-##### TEMP #####
-import pandas as pd
-from scipy.stats import f_oneway
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 @click.group()
 def cli():
     """ Command line interface for running the Volumetric User Study."""
@@ -38,7 +30,7 @@ def run():
 @run.command()
 def debug():
     # study.run_simulation("t", 1, False,60,False)
-    study.run_simulation("t", 1, "True",1,False)
+    # study.run_simulation("t", 1, "True",10,False)
     # study.run_simulation("to", 1, "True",1,False)
     visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
@@ -588,11 +580,21 @@ def task():
     pass
 
 @task.command()
-def ttest():
-    
+def anova():
     graph.graph_anova(utility.get_filtered_segment_times())
-
     
+    # approx_filtered_results = utility.fill_nones(filtered_results)
+    # print(approx_filtered_results)
+    
+    # task_results = utility.combine_task_results(approx_filtered_results,combine_by_offset=condition_flag)
+    # combined_results = utility.combine_challenges_results(approx_filtered_results)
+	
+    # sum_results = utility.get_condition_sums(combined_results)
+ 
+    # print(utility.perform_ttest(sum_results))
+    # print(utility.perform_anova(sum_results))
+
+    # graph.graph_ttest(combined_results)
 
 @task.command()
 def times():
@@ -610,6 +612,33 @@ def hand():
         points.append(hand_results[key][1]["TRACKER_OFFSET"])
         points.append(hand_results[key][1]["STATIC_OFFSET"])
     visualize.plot_finger_trace(points,1)
+    
+@task.command()
+def eye():
+	values = utility.get_eye_positions()
+
+@eval.group()
+def survey():
+    """Generate graphs for task completion times."""
+    pass
+
+@survey.command()
+def users():
+    data_dict = utility.load_excel()
+    print(data_dict[0])
+    graph.graph_survey(data_dict)
+    
+   
+@survey.command()
+def questions():
+	data_dict = utility.load_excel()
+	graph.graph_preferences(data_dict)  
+
+@survey.command()
+def reliability():
+    data_dict = utility.load_excel()
+    graph.graph_reliable_accurate(data_dict)  
+   
     
 ############
 ### Save ###

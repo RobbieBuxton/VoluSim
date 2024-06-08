@@ -177,8 +177,8 @@ extern "C"
 
 			processInput(window);
 			renderer->clear();
-			hand->draw();
-			challenge.draw();
+			// hand->draw();
+			// challenge.draw();
 
 			// For proving the display is 3D
 			// renderer->drawCuboid(centre + glm::vec3(0,0,6.0f), 13.5, 13.5, 12, 4);
@@ -189,9 +189,11 @@ extern "C"
 				renderer->drawImage(colourCameraSkeleton);
 				renderer->drawImage(depthCameraImportant);
 			}
-			// renderer->drawRoom();
+			renderer->drawRoom();
 			// Chess Set Demo
-			// renderer->drawChessSet();
+			renderer->drawChessSet();
+			// renderer->drawTeapot();
+
 			if (challenge.isFinished())
 			{
 				glfwSetWindowShouldClose(window, true);

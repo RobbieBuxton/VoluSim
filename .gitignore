@@ -5,3 +5,5 @@ result
 database
 *.log
 *.log.*
+*.xlsx
+volsim/data/resources/models/rungholt.obj

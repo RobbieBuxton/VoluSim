@@ -17,6 +17,7 @@ pkgs.mkShell {
     python311Packages.statsmodels
     python311Packages.seaborn
     python311Packages.matplotlib
+    python311Packages.openpyxl
     (texlive.combine {
             inherit (texlive)
               scheme-full

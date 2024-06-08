@@ -7,8 +7,8 @@ import utility
 # Camera Offser
 camera_x, camera_y, camera_z, camera_rot = -5.0, 68.0, 31.0, 114
 
-mainMonitor = 2
-offsetMonitor = 4
+mainMonitor = 3
+offsetMonitor = 2
 
 # Define the Mode enumeration in Python using a dictionary for simplicity
 mode_map = {"t": "TRACKER", "s": "STATIC", "to": "TRACKER_OFFSET", "so": "STATIC_OFFSET"}

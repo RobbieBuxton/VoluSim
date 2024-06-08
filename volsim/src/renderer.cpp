@@ -13,7 +13,8 @@ Renderer::Renderer(Display display)
     this->line = std::make_unique<Model>("data/resources/models/cylinder.obj");
 	this->cube = std::make_unique<Model>("data/resources/models/cube.obj");
     this->room = std::make_unique<Model>("data/resources/models/room.obj");
-	this->chessSet = std::make_unique<Model>("data/resources/models/chessSet.obj");
+	this->chessSet = std::make_unique<Model>("data/resources/models/rungholt.obj");
+	this->teapot = std::make_unique<Model>("data/resources/models/teapot.obj");
     this->modelShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
     this->imageShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/image.vs").c_str(), FileSystem::getPath("data/shaders/image.fs").c_str());
     this->display = std::make_unique<Display>(display);
@@ -23,15 +24,34 @@ Renderer::Renderer(Display display)
 void Renderer::drawChessSet() {
 	setupShader();
 
-    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-
+    // glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+	glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f));
 	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
     glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 25.0f, 2.0f));
     glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
 	
     modelShader->setMat4("model", model);
+	modelShader->setBool("usePhongShading", true);
     chessSet->draw(*modelShader.get());
+}
+
+void Renderer::drawTeapot() {
+	setupShader();
+
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
+
+	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 25.0f, 3.0f));
+    glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+	
+    modelShader->setMat4("model", model);
+	modelShader->setInt("overrideMaterialID", 4);
+	modelShader->setBool("usePhongShading", false);
+    teapot->draw(*modelShader.get());
+	modelShader->setInt("overrideMaterialID", -1);
+	modelShader->setBool("usePhongShading", true);
 }
 
 glm::mat4 Renderer::calculateRotation(glm::vec3 start, glm::vec3 end)
@@ -115,7 +135,9 @@ void Renderer::drawRoom() {
     glm::mat4 model = translationMatrix * scaleMatrix;
 
     modelShader->setMat4("model", model);
+	modelShader->setInt("overrideMaterialID", 0);
     room->draw(*modelShader.get());
+	modelShader->setInt("overrideMaterialID", -1);
 }
 
 void Renderer::updateEyePos(glm::vec3 currentEyePos)
