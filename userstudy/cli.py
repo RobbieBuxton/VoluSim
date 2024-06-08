@@ -29,10 +29,10 @@ def run():
 
 @run.command()
 def debug():
-    study.run_simulation("t", 1, False,60,False)
+    study.run_simulation("t", 1, True,60,False)
     # study.run_simulation("t", 1, "True",10,False)
     # study.run_simulation("to", 1, "True",1,False)
-    # visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
 @click.argument("user")

@@ -30,8 +30,8 @@ void main()
     // Sample textures
     vec3 ambientColor = texture(ambientTexture, TexCoords).rgb;
     vec3 diffuseColor = texture(diffuseTexture, TexCoords).rgb;
-    // float alphaValue = useAlphaMap ? texture(alphaTexture, TexCoords).r : 1.0;
-	float alphaValue = 1.0;
+    float alphaValue = useAlphaMap ? texture(alphaTexture, TexCoords).r : 1.0;
+	// float alphaValue = 1.0;
 
     // Calculate ambient, diffuse, and specular components
     vec3 norm = normalize(Normal);

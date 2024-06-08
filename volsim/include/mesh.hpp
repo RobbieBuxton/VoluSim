@@ -30,10 +30,10 @@ struct Vertex
     }
 };
 
-struct Texture
-{
+struct Texture {
     unsigned int id;
     std::string type;
+    bool hasAlpha;  // Add this to track if the texture has an alpha channel
 };
 
 class Mesh
