@@ -21,6 +21,7 @@ uniform sampler2D diffuseTexture;
 uniform sampler2D alphaTexture;
 
 uniform bool useAlphaMap = false; // Controls if alpha map is used
+uniform float alphaThreshold = 0.1; // Alpha threshold for alpha testing
 
 void main()
 {
@@ -30,23 +31,30 @@ void main()
     // Sample textures
     vec3 ambientColor = texture(ambientTexture, TexCoords).rgb;
     vec3 diffuseColor = texture(diffuseTexture, TexCoords).rgb;
-    float alphaValue = useAlphaMap ? texture(alphaTexture, TexCoords).r : 1.0;
-	// float alphaValue = 1.0;
+    // float alphaValue = useAlphaMap ? texture(alphaTexture, TexCoords).r : 1.0;
+	float alphaValue = 1.0;
+
+    // Alpha testing
+    if (alphaValue < alphaThreshold)
+        discard;
 
     // Calculate ambient, diffuse, and specular components
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuseLight = diff * diffuse[activeMaterialID] * diffuseColor;
-
+	// vec3 diffuseLight = diff * diffuse[activeMaterialID];
+	
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir);  
     float spec = pow(max(dot(norm, halfwayDir), 0.0), 16.0);
-    vec3 specularLight = shininess[activeMaterialID] * spec * specular[activeMaterialID];
+	vec3 specularLight = shininess[activeMaterialID] * spec * specular[activeMaterialID];
 
     vec3 ambientLight = ambient[activeMaterialID] * ambientColor;
+	// vec3 ambientLight = ambient[activeMaterialID];
 
-    vec3 result = ambientLight + diffuseLight + specularLight;
+    vec3 result = (ambientLight + diffuseLight + specularLight);
+    // vec3 result = 0.5 * (ambientLight + diffuseLight + specularLight);
 
     // Set the final fragment color with the alpha value
     FragColor = vec4(result, alphaValue);

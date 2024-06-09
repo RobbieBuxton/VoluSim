@@ -15,6 +15,7 @@ pkgs.mkShell {
     python311Packages.seaborn
     python311Packages.matplotlib
     python311Packages.openpyxl
+    python311Packages.trimesh
     (texlive.combine {
             inherit (texlive)
               scheme-full

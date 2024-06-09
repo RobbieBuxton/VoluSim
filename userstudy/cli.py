@@ -29,10 +29,10 @@ def run():
 
 @run.command()
 def debug():
-    study.run_simulation("t", 1, True,60,False)
+    study.run_simulation("t", 1, False,100,False)
     # study.run_simulation("t", 1, "True",10,False)
     # study.run_simulation("to", 1, "True",1,False)
-    visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
+    # visualize.visualize_point_cloud_pyvista("misc/pointCloud.csv")   
     
 @run.command()
 @click.argument("user")
@@ -605,13 +605,23 @@ def times():
 @task.command()
 def hand():
     hand_results = utility.get_filtered_hand_positions()
+    task_num = 4
+    user = "isawin"
     points = []
-    for key in hand_results:
-        points.append(hand_results[key][1]["TRACKER"])
-        points.append(hand_results[key][1]["STATIC"])
-        points.append(hand_results[key][1]["TRACKER_OFFSET"])
-        points.append(hand_results[key][1]["STATIC_OFFSET"])
-    visualize.plot_finger_trace(points,1)
+    # for key in hand_results:
+    #     points.append(hand_results[key][1]["TRACKER"])
+    #     points.append(hand_results[key][1]["STATIC"])
+    #     points.append(hand_results[key][1]["TRACKER_OFFSET"])
+    #     points.append(hand_results[key][1]["STATIC_OFFSET"])
+    
+    points.append(hand_results[user][task_num]["TRACKER"])
+    visualize.plot_finger_trace(points,task_num)
+    
+@task.command()
+def distance():
+	distance_results = utility.get_filtered_distance()
+	graph.graph_distance(distance_results)
+
     
 @task.command()
 def eye():

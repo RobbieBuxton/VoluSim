@@ -840,3 +840,80 @@ def graph_eye_movement(data):
 
     plt.savefig('misc/graphs/combined-eye-movement.pdf', transparent=True, bbox_inches='tight')
     plt.show()
+    
+def graph_distance(distance_results):
+    distance_cutoff = 30
+    
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 20,
+        "font.size": 15,
+        "legend.fontsize": 15,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "figure.figsize": (13, 8)
+    })
+
+    distances_by_condition = {
+        'TRACKER': [],
+        'TRACKER_OFFSET': [],
+        'STATIC': [],
+        'STATIC_OFFSET': []
+    }
+    
+    def get_distances_for_segment(segments,failed_segments, user_id, challenge_num, condition, idx):
+        output_distances = []
+        if not failed_segments[user_id][challenge_num][condition][idx-1]:
+            for time, distance in segments[idx]:
+                if condition in distances_by_condition:
+                    if distance < distance_cutoff:
+                        output_distances.append(distance)
+        else:
+            print(f"User {user_id} failed segment {idx-1} of challenge {challenge_num} in condition {condition}")
+        return output_distances
+    
+    # This is the same format as the distance_results dictionary
+    # Can you adjust the code to not append if the value for the segment is True?
+    total_failed_segments = utility.get_hand_failed_segments()
+
+    for user_id, challenges in distance_results.items():
+        for challenge_num, conditions in challenges.items():
+            for condition, segments in conditions.items():
+                for i in range(1,len(segments)):
+                    distances_by_condition[condition] += get_distances_for_segment(segments, total_failed_segments, user_id, challenge_num, condition, i)
+                
+    # for user_id, challenges in distance_results.items():
+    #     for challenge_num, conditions in challenges.items():
+    #         for condition, segments in conditions.items():
+    #             if challenge_num == 3:
+    #                 distances_by_condition[condition] += get_distances_for_segment(segments, total_failed_segments, user_id, challenge_num, condition, 6)
+                
+    print("TRACKER:" +str(len(distances_by_condition["TRACKER"])))
+    print("TRACKER_OFFSET:" +str(len(distances_by_condition["TRACKER_OFFSET"])))
+    print("STATIC:" +str(len(distances_by_condition["STATIC"])))
+    print("STATIC_OFFSET:" +str(len(distances_by_condition["STATIC_OFFSET"])))
+    
+    data = []
+    for condition, distances in distances_by_condition.items():
+        for distance in distances:
+            data.append({'Condition': condition, 'Distance': distance})
+
+    df = pd.DataFrame(data)
+
+    colors = ['#8f45a3ff', '#ff7c37ff', '#0073c0ff', '#2aaa00ff']
+
+    plt.figure(figsize=(13, 8))
+    sns.kdeplot(data=df, x='Distance', hue='Condition', palette=colors, fill=True)
+
+    plt.xlabel('Distance')
+    plt.ylabel('Density')
+    # plt.title('Distribution of Distances by Condition')
+    plt.grid(True, linestyle='--', linewidth=0.7)
+
+    plt.xlim(0, distance_cutoff)
+
+    plt.savefig('misc/graphs/distance-distribution.pdf', transparent=True, bbox_inches='tight')
+
+    plt.show()

@@ -104,6 +104,35 @@ def get_eye_positions():
                 eye_results[id][num][mode][-1].append((pos["time"],(pos["x"],pos["y"],pos["z"])))
     return eye_results
     
+
+def get_hand_failed_segments():
+    # Get the hand fail times
+    hand_fail_times = get_hand_fails_times(threshold=5)
+    
+    # Get the segment ranges
+    segment_ranges_data = segment_ranges()
+    
+    # Dictionary to store failed segments
+    hand_failed_segments = {}
+
+    for user_id, challenges in segment_ranges_data.items():
+        hand_failed_segments[user_id] = {}
+
+        for challenge_num, modes in challenges.items():
+            hand_failed_segments[user_id][challenge_num] = {}
+
+            for mode, segments in modes.items():
+                hand_failed_segments[user_id][challenge_num][mode] = []
+
+                for start_time, end_time in segments:
+                    # Check if any failure times fall within this segment
+                    has_failures = any(start_time <= failure_time <= end_time for failure_time in hand_fail_times[user_id][challenge_num][mode])
+                    # if has_failures:
+                        # print("Found one: ", user_id, challenge_num, mode)
+                    hand_failed_segments[user_id][challenge_num][mode].append(has_failures)
+    
+    return hand_failed_segments
+ 
 def get_filtered_hand_positions():
     seg_ranges = segment_ranges()
     db = mongodb.connect_to_mongo()
@@ -134,17 +163,50 @@ def get_filtered_hand_positions():
                 x_offset = 60
             middle = np.array([(pos["middle"]["x"] + pos["index"]["x"])/2.0 + x_offset, (pos["middle"]["y"] + pos["index"]["y"])/2.0, (pos["middle"]["z"] + pos["index"]["z"])/2.0])
             
-            if pos["time"] < seg_ranges[id][num][mode][0][0]:
-                hand_results[id][num][mode][0].append((pos["time"],middle))
             for i in range(len(seg_ranges[id][num][mode])):
                 if seg_ranges[id][num][mode][i][0] <= pos["time"] <= seg_ranges[id][num][mode][i][1]:
-                    hand_results[id][num][mode][i].append((pos["time"],middle))
+                    hand_results[id][num][mode][i+1].append((pos["time"],middle))
                     break
             else:
-                hand_results[id][num][mode][-1].append((pos["time"],middle))
+                hand_results[id][num][mode][0].append((pos["time"],middle))
     
     return hand_results
+
+def calculate_distance(p1, p2):
+    """Calculates the Euclidean distance between two points p1 and p2 in 3D space."""
+    return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2)
+
+def get_filtered_distance():
+    hand_positions = get_filtered_hand_positions()
+    task_positions = dict([(idx, get_task_positions(idx)[1:]) for idx in range(1, 6)])
+
+    filtered_distance = {}
+
+    for hand_id, challenges in hand_positions.items():
+        filtered_distance[hand_id] = {}
+        
+        for challenge_num, modes in challenges.items():
+            filtered_distance[hand_id][challenge_num] = {}
+            
+            task_positions_for_challenge = task_positions[challenge_num]
+            
+            for mode, hand_mode_positions in modes.items():
+                # print("User: ", hand_id, "Challenge: ", challenge_num, "Mode: ", mode)
+                filtered_distance[hand_id][challenge_num][mode] = []
+                for hand_positions_list in hand_mode_positions:
+                    distances = []
+                    for time, hand_position in hand_positions_list:
+                        # Assuming task_positions_for_challenge is a list of target positions for this mode
+                        corresponding_task_position = task_positions_for_challenge[modes[mode].index(hand_positions_list)]
+                        
+                        distance = calculate_distance(hand_position, corresponding_task_position)
+                        distances.append((time, distance))
+                    # print([distance for _, distance in distances[-5:]])
+                    
+                    filtered_distance[hand_id][challenge_num][mode].append(distances)
     
+    return filtered_distance
+
 def segment_ranges():
     db = mongodb.connect_to_mongo()
     if db is None:

@@ -191,7 +191,10 @@ extern "C"
 			}
 			// renderer->drawRoom();
 			// Chess Set Demo
-			renderer->drawRungholt();
+			// renderer->drawRungholt();
+			// renderer->drawHouse();
+			// renderer->drawMolecule();
+			renderer->drawErato();
 			// renderer->drawTeapot();
 
 			if (challenge.isFinished())

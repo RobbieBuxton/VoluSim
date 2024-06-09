@@ -13,29 +13,73 @@ Renderer::Renderer(Display display)
     this->line = std::make_unique<Model>("data/resources/models/cylinder.obj");
 	this->cube = std::make_unique<Model>("data/resources/models/cube.obj");
     this->room = std::make_unique<Model>("data/resources/models/room.obj");
-	this->rungholt = std::make_unique<Model>("data/resources/models/house.obj");
 	this->teapot = std::make_unique<Model>("data/resources/models/teapot.obj");
     this->modelShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/camera.vs").c_str(), FileSystem::getPath("data/shaders/camera.fs").c_str());
     this->imageShader = std::make_unique<Shader>(FileSystem::getPath("data/shaders/image.vs").c_str(), FileSystem::getPath("data/shaders/image.fs").c_str());
     this->display = std::make_unique<Display>(display);
 }
 
+void Renderer::lazyLoadModel(std::unique_ptr<Model>& model, const std::string& path) {
+    if (!model) {
+        model = std::make_unique<Model>(path);
+    }
+}
 
 void Renderer::drawRungholt() {
-	setupShader();
+    setupShader();
+    lazyLoadModel(rungholt, "data/resources/models/rungholt.obj");
 
-    // glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-	// glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.04f, 0.04f, 0.04f));
-	glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f));
-
-	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.04f, 0.04f, 0.04f));
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 25.0f, 0.0f));
     glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
-	
+
     modelShader->setMat4("model", model);
-	modelShader->setBool("usePhongShading", true);
+    modelShader->setBool("usePhongShading", true);
     rungholt->draw(*modelShader.get());
+}
+
+void Renderer::drawHouse() {
+    setupShader();
+    lazyLoadModel(house, "data/resources/models/house.obj");
+
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f));
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 25.0f, 0.0f));
+    glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+
+    modelShader->setMat4("model", model);
+    modelShader->setBool("usePhongShading", true);
+    house->draw(*modelShader.get());
+}
+
+void Renderer::drawMolecule() {
+    setupShader();
+    lazyLoadModel(molecule, "data/resources/models/8qbk.obj");
+
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f));
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    // glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 15.0f, 5.0f));
+	glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 25.0f, 0.0f));
+    glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+
+    modelShader->setMat4("model", model);
+    modelShader->setBool("usePhongShading", true);
+    molecule->draw(*modelShader.get());
+}
+
+void Renderer::drawErato() {
+    setupShader();
+    lazyLoadModel(erato, "data/resources/models/erato.obj");
+
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 158.0f, 0.0f));
+    glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+
+    modelShader->setMat4("model", model);
+    modelShader->setBool("usePhongShading", false);
+    erato->draw(*modelShader.get());
 }
 
 void Renderer::drawTeapot() {
@@ -164,7 +208,14 @@ void Renderer::drawImage(Image &image)
 }
 
 void Renderer::clear()
-{
-	glClearColor(0.96f, 0.81f, 0.64f, 1.0f);
+{ 
+	// Apricot
+	// glClearColor(0.96f, 0.81f, 0.64f, 1.0f);
+	// Black
+	// glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	// Gress Green 
+	// glClearColor(0.47f, 0.53f, 0.47f, 1.0f);
+	// Light Pink 
+	glClearColor(0.96f, 0.76f, 0.76f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }

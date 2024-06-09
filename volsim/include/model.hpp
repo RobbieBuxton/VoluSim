@@ -27,11 +27,7 @@ struct Material {
 class Model 
 {
     public:
-        Model(const char *objPath)
-        {
-            loadObjFile(objPath);
-        }
-        Model(const std::string &objPath, std::vector<Texture> textures)
+        Model(const std::string objPath)
         {
             loadObjFile(objPath);
         }
