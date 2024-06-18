@@ -8,13 +8,14 @@
         "lastModified": 1699475602,
         "narHash": "sha256-woR6Fk0Vzy+FHmkfaiEUE9r5gSbqd/zJSJIQmFlFDu8=",
         "owner": "RobbieBuxton",
-        "repo": "k4a-nix",
+        "repo": "azure-kinect-nix",
         "rev": "a1b7f36314b8c52e7ea6e8cded280abdb8c7d299",
         "type": "github"
       },
       "original": {
         "owner": "RobbieBuxton",
-        "repo": "k4a-nix",
+        "repo": "azure-kinect-nix",
+        "rev": "a1b7f36314b8c52e7ea6e8cded280abdb8c7d299",
         "type": "github"
       }
     },

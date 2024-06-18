@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/23.11";
-    k4a.url = "github:RobbieBuxton/k4a-nix";
+    k4a.url = "github:RobbieBuxton/azure-kinect-nix/a1b7f36314b8c52e7ea6e8cded280abdb8c7d299";
     libmediapipe.url = "github:RobbieBuxton/libmediapipe-nix";
   };
 
