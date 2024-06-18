@@ -7,7 +7,7 @@ import utility
 # Camera Offser
 camera_x, camera_y, camera_z, camera_rot = -2.0, 70.0, 31.0, 97.5
 
-mainMonitor = 2
+mainMonitor = 1
 offsetMonitor = 3
 
 # Define the Mode enumeration in Python using a dictionary for simplicity

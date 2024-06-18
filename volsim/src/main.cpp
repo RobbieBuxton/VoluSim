@@ -194,7 +194,8 @@ extern "C"
 			// renderer->drawRungholt();
 			// renderer->drawHouse();
 			// renderer->drawMolecule();
-			renderer->drawErato();
+			// renderer->drawErato();
+			renderer->drawImperial();
 			// renderer->drawTeapot();
 
 			if (challenge.isFinished())

@@ -19,6 +19,7 @@ public:
 	void drawCuboid(glm::vec3 position, float width, float length, float height, int colorIdx = 0);
     void drawRungholt();
 	void drawMolecule();
+	void drawImperial();
 	void drawErato();
 	void drawHouse();
 	void drawTeapot();
@@ -38,6 +39,7 @@ private:
 	std::unique_ptr<Model> erato = nullptr;
 	std::unique_ptr<Model> house = nullptr;
 	std::unique_ptr<Model> molecule = nullptr;
+	std::unique_ptr<Model> imperial = nullptr;
 	std::unique_ptr<Model> teapot;
     std::unique_ptr<Shader> modelShader;
     std::unique_ptr<Shader> imageShader;

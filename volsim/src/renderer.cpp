@@ -25,6 +25,21 @@ void Renderer::lazyLoadModel(std::unique_ptr<Model>& model, const std::string& p
     }
 }
 
+void Renderer::drawImperial() {
+    setupShader();
+    lazyLoadModel(imperial, "data/resources/models/imperial.obj");
+
+    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(5.5f, 5.5f, 5.5f));
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 22.5f, -0.75f));
+    glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+
+    modelShader->setMat4("model", model);
+    modelShader->setBool("usePhongShading", true);
+    imperial->draw(*modelShader.get());
+}
+
+
 void Renderer::drawRungholt() {
     setupShader();
     lazyLoadModel(rungholt, "data/resources/models/rungholt.obj");
@@ -74,12 +89,13 @@ void Renderer::drawErato() {
 
     glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
     glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 158.0f, 0.0f));
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 15.0f, 0.0f));
     glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
 
     modelShader->setMat4("model", model);
     modelShader->setBool("usePhongShading", false);
     erato->draw(*modelShader.get());
+	modelShader->setBool("usePhongShading", true);
 }
 
 void Renderer::drawTeapot() {
@@ -210,12 +226,12 @@ void Renderer::drawImage(Image &image)
 void Renderer::clear()
 { 
 	// Apricot
-	// glClearColor(0.96f, 0.81f, 0.64f, 1.0f);
+	glClearColor(0.96f, 0.81f, 0.64f, 1.0f);
 	// Black
 	// glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	// Gress Green 
 	// glClearColor(0.47f, 0.53f, 0.47f, 1.0f);
 	// Light Pink 
-	glClearColor(0.96f, 0.76f, 0.76f, 1.0f);
+	// glClearColor(0.96f, 0.76f, 0.76f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }

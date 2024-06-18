@@ -11,12 +11,22 @@ def plot_trace(eye_points, index_finger_points, middle_finger_points, challenge)
     # Add points to the plotter
     eye_point_cloud = pv.PolyData(eye_points)
     index_finger_point_cloud = pv.PolyData(index_finger_points)
-    middle_finger_point_cloud  = pv.PolyData(middle_finger_points)
+    middle_finger_point_cloud = pv.PolyData(middle_finger_points)
     
-    plotter.add_points(eye_point_cloud, color="red", point_size=5)
-    plotter.add_points(index_finger_point_cloud, color="blue", point_size=5)
-    plotter.add_points(middle_finger_point_cloud, color="green", point_size=5)
+    plotter.add_points(eye_point_cloud, color="red", point_size=5, label='Eye Points')
+    plotter.add_points(index_finger_point_cloud, color="blue", point_size=5, label='Index Finger Points')
+    plotter.add_points(middle_finger_point_cloud, color="green", point_size=5, label='Middle Finger Points')
 
+    # Add coordinate axes to show x, y, z directions
+    plotter.add_axes()
+    
+    # Add legends
+    plotter.add_legend()
+
+    # Optional: Add grid for better spatial understanding
+    plotter.show_grid()
+
+    # Additional plotting functions (assumed to be defined elsewhere)
     plot_screen(plotter)
     plot_virtual_sim(plotter)
     plot_task(plotter, challenge)
@@ -35,6 +45,62 @@ def generate_color_gradient(start_color, end_color, num_colors):
         color = (1 - g) * np.array(start_color) + g * np.array(end_color)
         color_list.append(color)
     return color_list
+
+import pyvista as pv
+import numpy as np
+
+def plot_full_trace(finger_points_conditions, challenge):
+    for condition, finger_points in finger_points_conditions.items():
+        # Create a PyVista plotter with off_screen=True
+        plotter = pv.Plotter(off_screen=True)
+        
+        # Generate a gradient from green to red
+        start_color = (0, 1, 0)  # Green in RGB
+        end_color = (1, 0, 0)    # Red in RGB
+        num_segments = len(finger_points[0])
+        colors = generate_color_gradient(start_color, end_color, num_segments)
+
+        print(num_segments)
+        
+        # Calculate volsim bounds
+        width = 11.25
+        height = 22.5
+        centre = np.array([0, 15, 0])
+        min_x, max_x = centre[0] - width/2, centre[0] + width/2
+        min_y, max_y = centre[1] - height/2, centre[1] + height/2
+        min_z, max_z = centre[2], centre[2] + width
+
+        def is_point_inside_screen(point):
+            x, y, z = point
+            return min_x <= x <= max_x and min_y <= y <= max_y and min_z <= z <= max_z
+        
+        for person in finger_points:
+            color_index = 0
+            for segment in person:
+                filtered_points = [point for (_, point) in segment if is_point_inside_screen(point)]
+                if filtered_points:
+                    finger_point_cloud = pv.PolyData(filtered_points)
+                    color = colors[color_index]
+                    plotter.add_points(finger_point_cloud, color=color, point_size=3)
+                color_index += 1
+
+        # Assuming plot_screen, plot_virtual_sim, and plot_task add necessary elements to the plotter
+        # plot_virtual_sim(plotter)
+        plot_task(plotter, challenge)
+        
+        # # Set a non-transparent background temporarily for adding grid and axes
+        # plotter.set_background(color="white")
+
+        # Add axes and grid
+        # plotter.add_axes()
+        plotter.show_grid()
+
+        # Change back to a transparent background for the screenshot
+        # plotter.set_background(color=None, top="white")  # None makes the background transparent
+        
+        # Save the screenshot with a transparent background
+        plotter.screenshot(f"misc/traces/finger-trace-{challenge}-{condition}-plot.png", transparent_background=True)
+
 
 def plot_finger_trace(finger_points, challenge):
     # Create a PyVista plotter with off_screen=True
@@ -131,12 +197,12 @@ def plot_task(plotter, challenge, demo=False):
     task_positions = np.array(utility.get_task_positions(challenge,demo))
 
     # Add task positions to the plotter
-    plotter.add_points(task_positions, color="purple", point_size=8)
+    plotter.add_points(task_positions, color="blue", point_size=8)
 
     # Draw lines between consecutive task positions
     for i in range(len(task_positions) - 1):
         line = pv.Line(task_positions[i], task_positions[i + 1])
-        plotter.add_mesh(line, color="purple", line_width=2)
+        plotter.add_mesh(line, color="blue", line_width=5)
 
 
 def visualize_point_cloud_pyvista_print(file_path, z_min=0, z_max=500, distance_threshold=1000):
